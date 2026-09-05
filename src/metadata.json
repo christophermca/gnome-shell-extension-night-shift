@@ -2,7 +2,7 @@
   "name": "Night Shift",
   "uuid": "night-shift@christophermca.github.io",
   "description": "Change to modes (Light/Dark) depending if on sunrise/sunset in your location",
-  "url": "https://github.com/christophermca/gnome-night-shift-extension",
+  "url": "https://github.com/christophermca/gnome-shell-extension-night-shift",
   "shell-version": [
     "50"
   ],
