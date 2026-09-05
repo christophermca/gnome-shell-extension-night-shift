@@ -3,6 +3,7 @@
 import os
 import re
 import gi
+import json
 import argparse
 import requests
 import subprocess
@@ -97,7 +98,7 @@ def _get_location(override: bool) -> tuple(float, float):
             pass
 
 
-def _get_sunrise_sunset(lat: float, lng: float):
+def _get_sunrise_sunset(lat: float, lng: float, debug: bool):
     try:
         params = {"lat": lat, "lng": lng}
 
@@ -106,6 +107,10 @@ def _get_sunrise_sunset(lat: float, lng: float):
         response.raise_for_status()
 
         data = response.json()
+
+        if debug:
+            json_string = json.dumps(data, indent=4, sort_keys=True)
+            print(f"[night-shift] {json_string}")
 
         tzid = data["tzid"]
         sunrise = datetime.fromisoformat(data["sunrise"]).strftime("%H:%M")
@@ -181,17 +186,15 @@ def main():
         description="Get the times for the sunrise/sunset"
     )
     parser.add_argument("-f", action="store_true")
+    parser.add_argument("-d", action="store_true")
     args = parser.parse_args()
     override = args.f
-
-    # GET data from GObject
-    settings = _settings()
-    useGeoclue = settings.get_boolean("use-geoclue")
+    debug = args.d
 
     # Run
     coords: tuple(float, float) = _get_location(override)
     if coords:
-        _get_sunrise_sunset(*coords)
+        _get_sunrise_sunset(*coords, debug)
 
 
 if __name__ == "__main__":
