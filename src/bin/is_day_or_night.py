@@ -30,7 +30,7 @@ schema_source = Gio.SettingsSchemaSource.new_from_directory(
 def is_day_or_night():
     settings = _settings()
 
-    times = settings.get_value("times")
+    times: list[str] = settings.get_value("times")
     [sunrise, sunset] = times
     current_time = datetime.now().strftime("%H:%M")  # 24hr format
 
