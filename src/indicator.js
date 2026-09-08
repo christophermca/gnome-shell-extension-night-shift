@@ -4,18 +4,25 @@ import * as PopupMenu from "resource:///org/gnome/shell/ui/popupMenu.js";
 import GObject from "gi://GObject";
 import St from "gi://St";
 import Gio from "gi://Gio";
+// import GLib from "gi://GLib";
 
 export const NightShiftIndicator = GObject.registerClass(
   class NightShiftIndicator extends PanelMenu.Button {
-    constructor(settings) {
+    constructor(settings, fileIcon) {
       super(0.0, "NightShift");
       this._settings = settings;
+      // const iconFile = this.dir
+      //   .get_child("icons")
+      //   .get_child("night-shift-ringed-symbolic.svg");
+      // const fileIcon = new Gio.FileIcon({ file: iconFile });
 
       let icon = new St.Icon({
-        icon_name: "view-mirror-symbolic.svg",
+        gicon: fileIcon,
         style_class: "system-status-icon",
+        // icon_name: "view-mirror-symbolic.svg",
       });
 
+      console.log(`[night-shift] ${icon}`);
       this.add_child(icon);
 
       this._headerRow = new PopupMenu.PopupMenuItem("Timezone", {
