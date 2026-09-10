@@ -46,13 +46,13 @@ class GetTimeOfSunriseSunset:
         self.settings = _settings()
         coords: tuple(float, float) = self._get_location(override)
         if coords:
-            self.get_sunrise_sunset(*coords, debug)
+            self._get_sunrise_sunset(*coords, debug)
 
     def _get_location(self, override: bool) -> tuple(float, float):
         try:
             useGeoclue = self.settings.get_boolean("use-geoclue")
             if not useGeoclue:
-                coords: tuple(float, float) = get_static_location()
+                coords: tuple(float, float) = _get_static_location()
             else:
                 # Get location data from Geoclue
                 agent = subprocess.Popen(["/usr/lib/geoclue-2.0/demos/agent"])
@@ -90,7 +90,7 @@ class GetTimeOfSunriseSunset:
                 coords = tuple(arr)
 
                 # did location update?
-            self.save(coords, override)
+            self._save(coords, override)
 
             return coords
 
@@ -111,7 +111,7 @@ class GetTimeOfSunriseSunset:
             except NameError:
                 pass
 
-    def get_sunrise_sunset(self, lat: float, lng: float, debug: bool):
+    def _get_sunrise_sunset(self, lat: float, lng: float, debug: bool):
         try:
             params = {"lat": lat, "lng": lng}
 
@@ -149,7 +149,7 @@ class GetTimeOfSunriseSunset:
         finally:
             print("Done")
 
-    def save(self, coords: tuple(float, float), override=False) -> None:
+    def _save(self, coords: tuple(float, float), override=False) -> None:
         previous_coordinates = self.settings.get_value(
             "last-known-coordinates"
         )
@@ -167,7 +167,7 @@ class GetTimeOfSunriseSunset:
                 f"Locations are the same (old/new) '{previous_coordinates}'/'{coords_string}'"
             )
 
-    def get_static_location(self) -> tuple(float, float):
+    def _get_static_location(self) -> tuple(float, float):
 
         lat = self.settings.get_string("static-latitude")
         lng = self.settings.get_string("static-longitude")

@@ -37,10 +37,10 @@ def is_day_or_night():
     # check if currrent time is after sunrise or sunset
     DAY_NIGHT: str
 
-    if current_time > sunrise:
+    if current_time >= sunrise:
         DAY_NIGHT = "day"
 
-    if current_time > sunset:
+    if current_time >= sunset:
         DAY_NIGHT = "night"
 
     # set day-or-night
