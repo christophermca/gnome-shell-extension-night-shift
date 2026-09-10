@@ -167,9 +167,14 @@ export default class NightShiftExtension extends Extension {
       const iconFile = this.dir
         .get_child("icons")
         .get_child("night-shift-ringed-symbolic.svg");
+
       const fileIcon = new Gio.FileIcon({ file: iconFile });
 
-      this._indicator = new NightShiftIndicator(this._settings, fileIcon);
+      this._indicator = new NightShiftIndicator(
+        this._settings,
+        this.metadata.name,
+        fileIcon,
+      );
 
       this._useGeoclueId = this._settings.connect(
         "changed::use-geoclue",

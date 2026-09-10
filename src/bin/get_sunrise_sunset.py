@@ -46,7 +46,7 @@ class GetTimeOfSunriseSunset:
         self.settings = _settings()
         coords: tuple(float, float) = self._get_location(override)
         if coords:
-            self._get_sunrise_sunset(*coords, debug)
+            self.get_sunrise_sunset(*coords, debug)
 
     def _get_location(self, override: bool) -> tuple(float, float):
         try:
@@ -111,7 +111,7 @@ class GetTimeOfSunriseSunset:
             except NameError:
                 pass
 
-    def _get_sunrise_sunset(self, lat: float, lng: float, debug: bool):
+    def get_sunrise_sunset(self, lat: float, lng: float, debug: bool):
         try:
             params = {"lat": lat, "lng": lng}
 
