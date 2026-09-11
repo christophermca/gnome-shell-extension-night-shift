@@ -48,7 +48,7 @@ export default class NightShiftPreferences extends ExtensionPreferences {
     const useGeoclue = new Adw.SwitchRow({
       title: gettext("Automatic location detection"),
       subtitle: gettext(
-        "Requires location services enabled and internet access",
+        "Requires Internet access AND Location Services to be enabled ( Settings > Privacy and Security > Location )",
       ),
     });
 
