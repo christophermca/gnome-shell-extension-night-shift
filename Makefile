@@ -61,4 +61,3 @@ log-extension:
 .PHONY: log-preferences
 log-preferences:
 	journalctl -f -o cat /usr/bin/gjs
-

@@ -1,32 +1,22 @@
 # 🌙 Night Shift - GNOME Extension
 
-Night Shift is a GNOME Shell extension that automatically switches your desktop between **Day** and **Night** modes (Light and Dark themes). Instead of manually changing appearance settings, the extension detects whether it is currently day or night at your location and applies the appropriate mode automatically.
+Night Shift is a GNOME Shell extension that automatically switches your desktop between **Day** and **Night** modes (Light and Dark themes).
+The extension detects whether it is currently day or night at your location and applies the appropriate mode automatically.
 
-The extension is designed for users who prefer a light desktop during the day and a dark desktop after sunset, providing a seamless transition throughout the day.
 
 ## ✨ Features
 
 - 🌅 Automatically switch between **Day** (Light) and **Night** (Dark) modes
-- 📍 Uses sunrise and sunset times for your location
-- 🔄 Seamless integration with GNOME Shell
-- ⚡ Lightweight and easy to configure
+- 📍 Use Static Location
 - 🌐 Location-based detection via Geoclue
-
-## 🔧 How It Works
-
-Night Shift relies on **Geoclue 2.0** and the **NOAA API** to determine whether the sun is currently above or below the horizon at your location:
-
-1. Your geographic location is determined from Geoclue
-2. The location is passed to the NOAA API
-3. Night Shift determines when to activate **Day** or **Night** mode based on sunrise/sunset times
 
 ## 📋 Requirements
 
 - GNOME Shell 40+
-- Internet connection (for NOAA API queries)
+- Internet connection
 
 ### [**Optional** Dependency]
-- Geoclue 2.0
+- Geoclue 2.0 (Included with gnome)
 
 ## 📦 Installation
 
@@ -51,15 +41,17 @@ Once installed and enabled:
 1. The extension automatically detects your location with geoclue or uses
    provided static location.
 2. It monitors sunrise and sunset times
-3. Your desktop automatically switches to Light mode at sunrise
-4. Your desktop automatically switches to Dark mode at sunset
 
-## ⚙️ Configuration
+The Extension will automatically switch your Desktop Style (Mode)
+1. Your desktop automatically switches to Light mode at `sunrise`
+1. Your desktop automatically switches to Dark mode at `sunset`
 
-Currently, Night Shift operates automatically with no manual configuration required. The extension:
-- Automatically detects your location using Geoclue
-- Fetches sunrise/sunset times from the NOAA API
-- Switches your theme at the appropriate times
+## ⚙️ Settings
+
+- `Show Indicator` -- Display an indicator in `Status panel`
+- `Automatic location detection` -- uses location services to determine location
+- `Static Location (manual)` -- uses the user-provided coordinates for location
+
 
 ## 🐛 Troubleshooting
 
