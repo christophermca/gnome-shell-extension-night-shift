@@ -23,24 +23,15 @@ import { Extension } from "resource:///org/gnome/shell/extensions/extension.js";
 
 import { NightShiftIndicator } from "./indicator.js";
 
-const localDir = GLib.get_user_data_dir(); // $HOME/.local/share
-const systemdUserDir = GLib.build_filenamev([localDir, "systemd", "user"]);
+Gio._promisify(Gio.Subprocess.prototype, "wait_check_async");
 
-const units = [
-  "get-sunrise-sunset.timer",
-  "get-sunrise-sunset.service",
-  "night-shift.timer",
-  "night-shift.service",
-];
+const NIGHT_SHIFT = GLib.build_filenamev([
+  GLib.get_home_dir(),
+  ".local",
+  "bin",
+  "night-shift",
+]);
 
-// Gio required to be wrapped in promisify for async/await to work https://gjs.guide/guides/gio/file-operations.html
-Gio._promisify(
-  Gio.File.prototype,
-  "make_symbolic_link_async",
-  "make_symbolic_link_finish",
-  "delete_async",
-);
-const night_shift_cli = GLib.get_home_dir() + "/.local/bin/night-shift";
 export default class NightShiftExtension extends Extension {
   enable() {
     this._settings = this.getSettings();
@@ -86,32 +77,35 @@ export default class NightShiftExtension extends Extension {
       desktopSettings.set_string("color-scheme", shift);
   }
 
-  async _disableServices() {
-    try {
-      GLib.spawn_command_line_async(
-        `command -v ${night_shift_cli} && ${night_shift_cli} services taredown`,
+  async _nightShift(...args) {
+    if (!GLib.file_test(NIGHT_SHIFT, GLib.FileTest.IS_EXECUTABLE)) {
+      Main.notify(
+        "Night Shift",
+        "Instaall the helper: pipx install 'night-shift-cli[services]'",
       );
-      GLib.spawn_command_line_async("python -m pipx uninstall night-shift-cli");
-    } catch (e) {
-      console.error(`Error: [night-shift] _disableServices ${e}`);
+      return false;
     }
+    const proc = Gio.Subprocess.new(
+      [NIGHT_SHIFT, ...args],
+      Gio.SubprocessFlags.NONE,
+    );
+    return proc.wait_check_async(null); // returns as non-zero
   }
 
-  async _removeFile(file) {
-    if (file.query_exists(null)) {
-      await file.delete_async(GLib.PRIORITY_DEFAULT, null);
-      const basename = file.get_basename();
+  async _disableServices() {
+    try {
+      await this._nightShift("services", "teardown");
+    } catch (e) {
+      console.error(`[night-shift] services teardown failed: ${e}`);
     }
   }
 
   async _createAndStartServices() {
     try {
+      const pathToSchemas = GLib.build_filenamev([this.path, "schemas"]);
       console.log(`[night-shift] start createAndStartServices`);
-      GLib.spawn_command_line_async(
-        `command -v ${night_shift_cli} && ${night_shift_cli} services setup ${this._settings}`,
-      );
-      // GLib.spawn_command_line_async(`night-shift setup ${this._settings}`);
-      // console.log(`[night-shift] which night-shift`);
+      if !pathToSchemas throw(new Error(`File not found ${pathToSchemas}`))
+      await this._nightShift("services", "setup", pathToSchemas);
     } catch (e) {
       console.error(`[night-shift] Failed to create and start services ${e}`);
     } finally {

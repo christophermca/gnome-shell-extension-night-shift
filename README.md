@@ -20,6 +20,14 @@ The extension detects whether it is currently day or night at your location and 
 
 ## 📦 Installation
 
+### Install Dependencies
+```bash
+pipx install --system-site-packages \
+  --index-url https://test.pypi.org/simple/ \
+  --pip-args="--extra-index-url https://pypi.org/simple/" \
+  "night-shift-cli[services]"
+```
+
 ### Via GNOME Extensions (Recommended)
 
 [Coming soon, link to extension on extensions.gnome.org]
