@@ -89,7 +89,7 @@ export default class NightShiftExtension extends Extension {
   async _disableServices() {
     try {
       GLib.spawn_command_line_async(
-        `${night_shift_cli} && ${night_shift_cli} services taredown`,
+        `command -v ${night_shift_cli} && ${night_shift_cli} services taredown`,
       );
       GLib.spawn_command_line_async("python -m pipx uninstall night-shift-cli");
     } catch (e) {
@@ -108,7 +108,7 @@ export default class NightShiftExtension extends Extension {
     try {
       console.log(`[night-shift] start createAndStartServices`);
       GLib.spawn_command_line_async(
-        `${night_shift_cli} && ${night_shift_cli} services setup ${this._settings}`,
+        `command -v ${night_shift_cli} && ${night_shift_cli} services setup ${this._settings}`,
       );
       // GLib.spawn_command_line_async(`night-shift setup ${this._settings}`);
       // console.log(`[night-shift] which night-shift`);
