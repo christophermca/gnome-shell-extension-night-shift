@@ -4,7 +4,7 @@
   "description": "Change to modes (Light/Dark) depending if on sunrise/sunset in your location",
   "url": "https://github.com/christophermca/gnome-shell-extension-night-shift",
   "shell-version": [
-    "50"
+    "50", "51"
   ],
   "version":"1",
   "version-name":"0.3.1",

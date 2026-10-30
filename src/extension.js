@@ -40,7 +40,7 @@ Gio._promisify(
   "make_symbolic_link_finish",
   "delete_async",
 );
-
+const night_shift_cli = GLib.get_home_dir() + "/.local/bin/night-shift";
 export default class NightShiftExtension extends Extension {
   enable() {
     this._settings = this.getSettings();
@@ -88,20 +88,10 @@ export default class NightShiftExtension extends Extension {
 
   async _disableServices() {
     try {
-      for (const unit of units) {
-        const pathToUnit = GLib.build_filenamev([systemdUserDir, unit]);
-        const linkFile = Gio.File.new_for_path(pathToUnit);
-        await this._removeFile(linkFile);
-      }
-
-      //Stop and disable services
-      GLib.spawn_command_line_async("systemctl --user daemon-reload");
       GLib.spawn_command_line_async(
-        "systemctl --user disable --now get-sunrise-sunset.timer",
+        `${night_shift_cli} && ${night_shift_cli} services taredown`,
       );
-      GLib.spawn_command_line_async(
-        "systemctl --user disable--now night-shift.timer",
-      );
+      GLib.spawn_command_line_async("python -m pipx uninstall night-shift-cli");
     } catch (e) {
       console.error(`Error: [night-shift] _disableServices ${e}`);
     }
@@ -115,40 +105,17 @@ export default class NightShiftExtension extends Extension {
   }
 
   async _createAndStartServices() {
-    GLib.mkdir_with_parents(systemdUserDir, 0o700);
-
-    //Systemd units
     try {
-      async function createSymbolicLink() {
-        for (const unit of units) {
-          const pathToUnit = GLib.build_filenamev([systemdUserDir, unit]);
-          const linkFile = Gio.File.new_for_path(pathToUnit);
-          const target = `${this.path}/units/${unit}`;
-          const fileName = linkFile.get_basename();
-
-          await this._removeFile(linkFile);
-          await linkFile.make_symbolic_link_async(
-            target,
-            GLib.PRIORITY_DEFAULT,
-            null, // Cancellable
-            (source, result) => {
-              const success = linkFile.make_symbolic_link_finish(result);
-            },
-          );
-        }
-      }
-
-      await createSymbolicLink.call(this).then(() => {
-        GLib.spawn_command_line_async("systemctl --user daemon-reload");
-        GLib.spawn_command_line_async(
-          "systemctl --user enable --now get-sunrise-sunset.timer",
-        );
-        GLib.spawn_command_line_async(
-          "systemctl --user enable --now night-shift.timer",
-        );
-      });
+      console.log(`[night-shift] start createAndStartServices`);
+      GLib.spawn_command_line_async(
+        `${night_shift_cli} && ${night_shift_cli} services setup ${this._settings}`,
+      );
+      // GLib.spawn_command_line_async(`night-shift setup ${this._settings}`);
+      // console.log(`[night-shift] which night-shift`);
     } catch (e) {
       console.error(`[night-shift] Failed to create and start services ${e}`);
+    } finally {
+      console.log(`[night-shift] completed createAndStartServices`);
     }
   }
 
@@ -179,7 +146,7 @@ export default class NightShiftExtension extends Extension {
       this._useGeoclueId = this._settings.connect(
         "changed::use-geoclue",
         (set, key) => {
-          let newValue = this._settings.get_string(key);
+          let newValue = this._settings.get_boolean(key);
           log(`[night-shift] use-geoclue changed to: ${newValue}`);
           GLib.spawn_command_line_async(
             "systemctl --user restart get-sunrise-sunset.service",
