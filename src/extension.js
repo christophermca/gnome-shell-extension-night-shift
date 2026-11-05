@@ -19,18 +19,20 @@
 import GLib from "gi://GLib";
 import Gio from "gi://Gio";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
-import { Extension } from "resource:///org/gnome/shell/extensions/extension.js";
+import {
+  Extension,
+  gettext as _,
+} from "resource:///org/gnome/shell/extensions/extension.js";
 
 import { NightShiftIndicator } from "./indicator.js";
 
-Gio._promisify(Gio.Subprocess.prototype, "wait_check_async");
+Gio._promisify(Gio.Subprocess.prototype, "communicate_utf8_async");
 
-const NIGHT_SHIFT = GLib.build_filenamev([
-  GLib.get_home_dir(),
-  ".local",
-  "bin",
-  "nocturne-shift",
-]);
+const INSTALL_HINT =
+  "Install the helper: pipx install --system-site-packages gnome-night-shift";
+
+// nocturne-shift isn't installed at all (as opposed to failing when run)
+class HelperMissingError extends Error {}
 
 function findNocturneShift() {
   const nocShiftPath = GLib.find_program_in_path("nocturne-shift");
@@ -51,6 +53,8 @@ export default class NightShiftExtension extends Extension {
     this._createAndStartServices();
     this._handleIndicator();
     this._connectToShiftChange();
+    // Apply the current state now; the signal only fires on a change
+    this.handleShiftChange(this._settings.get_string("day-or-night"));
   }
 
   disable() {
@@ -66,7 +70,7 @@ export default class NightShiftExtension extends Extension {
       this._shiftChangeId = null;
     }
 
-    this._indicator.destroy();
+    this._indicator?.destroy();
     this._indicator = null;
 
     this._settings = null;
@@ -90,27 +94,33 @@ export default class NightShiftExtension extends Extension {
       desktopSettings.set_string("color-scheme", shift);
   }
 
+  // Runs `nocturne-shift ...args`. Throws HelperMissingError when the command
+  // isn't installed, or an Error with its stderr when it exits non-zero.
   async _nightShift(...args) {
     const cmd = findNocturneShift();
-    if (!cmd) {
-      Main.notify(
-        "Night Shift",
-        "Timers could not be set up. Is gnome-night-shift installed? `pipx install --system-site-packages gnome-night-shift`",
-      );
-      return false;
-    }
+    if (!cmd) throw new HelperMissingError("nocturne-shift not found");
+
+    // stdout still goes to the journal; stderr is read for the error message
     const proc = Gio.Subprocess.new(
       [cmd, ...args],
       Gio.SubprocessFlags.STDERR_PIPE,
     );
-    return proc.wait_check_async(null);
+    const [, stderr] = await proc.communicate_utf8_async(null, null);
+    if (!proc.get_successful()) {
+      throw new Error(
+        stderr?.trim() ||
+          `nocturne-shift ${args.join(" ")} exited with ${proc.get_exit_status()}`,
+      );
+    }
   }
 
   async _disableServices() {
     try {
       await this._nightShift("services", "teardown");
     } catch (e) {
-      console.error(`[night-shift] services teardown failed: ${e}`);
+      // Nothing to tear down without the helper; don't notify on every lock
+      if (!(e instanceof HelperMissingError))
+        console.error(`[night-shift] services teardown failed: ${e}`);
     }
   }
 
@@ -123,6 +133,13 @@ export default class NightShiftExtension extends Extension {
       await this._nightShift("services", "setup", pathToSchemas);
     } catch (e) {
       console.error(`[night-shift] Failed to create and start services ${e}`);
+      // e.g. only nocturne-shift is installed: "... requires: pip install 'gnome-night-shift'"
+      Main.notify(
+        "Night Shift",
+        e instanceof HelperMissingError
+          ? INSTALL_HINT
+          : `Timers could not be set up: ${e.message}`,
+      );
     } finally {
       console.log(`[night-shift] completed createAndStartServices`);
     }

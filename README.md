@@ -12,7 +12,7 @@ The extension detects whether it is currently day or night at your location and 
 
 ## 📋 Requirements
 
-- GNOME Shell 40+
+- GNOME Shell 50+
 - Internet connection
 
 ### [**Optional** Dependency]
@@ -73,4 +73,4 @@ Contributions are welcome! Please feel free to submit issues and pull requests.
 
 ## 📧 Support
 
-Found a bug or have a feature request? Please open an [issue](https://github.com/christophermca/gnome-night-shift-extension/issues) on GitHub. For security concerns, please contact the maintainer directly.
+Found a bug or have a feature request? Please open an [issue](https://github.com/christophermca/gnome-shell-extension-night-shift/issues) on GitHub. For security concerns, please contact the maintainer directly.
