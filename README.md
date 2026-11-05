@@ -25,7 +25,7 @@ The extension detects whether it is currently day or night at your location and 
 pipx install --system-site-packages \
   --index-url https://test.pypi.org/simple/ \
   --pip-args="--extra-index-url https://pypi.org/simple/" \
-  "night-shift-cli[services]"
+  "gnome-night-shift"
 ```
 
 ### Via GNOME Extensions (Recommended)

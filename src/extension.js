@@ -29,8 +29,21 @@ const NIGHT_SHIFT = GLib.build_filenamev([
   GLib.get_home_dir(),
   ".local",
   "bin",
-  "night-shift",
+  "nocturne-shift",
 ]);
+
+function findNocturneShift() {
+  const nocShiftPath = GLib.find_program_in_path("nocturne-shift");
+  if (nocShiftPath) return nocShiftPath;
+  // gnome-shell's PATH often lacks ~/.local/bin, where `pipx install` puts it
+  const userBin = GLib.build_filenamev([
+    GLib.get_home_dir(),
+    ".local",
+    "bin",
+    "nocturne-shift",
+  ]);
+  return GLib.file_test(userBin, GLib.FileTest.IS_EXECUTABLE) ? userBin : null;
+}
 
 export default class NightShiftExtension extends Extension {
   enable() {
@@ -78,18 +91,19 @@ export default class NightShiftExtension extends Extension {
   }
 
   async _nightShift(...args) {
-    if (!GLib.file_test(NIGHT_SHIFT, GLib.FileTest.IS_EXECUTABLE)) {
+    const cmd = findNocturneShift();
+    if (!cmd) {
       Main.notify(
         "Night Shift",
-        "Instaall the helper: pipx install 'night-shift-cli[services]'",
+        "Timers could not be set up. Is gnome-night-shift installed? `pipx install --system-site-packages gnome-night-shift`",
       );
       return false;
     }
     const proc = Gio.Subprocess.new(
-      [NIGHT_SHIFT, ...args],
-      Gio.SubprocessFlags.NONE,
+      [cmd, ...args],
+      Gio.SubprocessFlags.STDERR_PIPE,
     );
-    return proc.wait_check_async(null); // returns as non-zero
+    return proc.wait_check_async(null);
   }
 
   async _disableServices() {
@@ -104,7 +118,8 @@ export default class NightShiftExtension extends Extension {
     try {
       const pathToSchemas = GLib.build_filenamev([this.path, "schemas"]);
       console.log(`[night-shift] start createAndStartServices`);
-      if !pathToSchemas throw(new Error(`File not found ${pathToSchemas}`))
+      if (!GLib.file_test(pathToSchemas, GLib.FileTest.IS_DIR))
+        throw new Error(`File not found ${pathToSchemas}`);
       await this._nightShift("services", "setup", pathToSchemas);
     } catch (e) {
       console.error(`[night-shift] Failed to create and start services ${e}`);
