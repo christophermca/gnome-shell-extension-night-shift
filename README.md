@@ -22,12 +22,20 @@ The extension detects whether it is currently day or night at your location and 
 
 ### Install Dependencies
 ```bash
-pipx install --system-site-packages \
-  --index-url https://test.pypi.org/simple/ \
-  --pip-args="--extra-index-url https://pypi.org/simple/" \
-  "gnome-night-shift"
+pipx install --system-site-packages gnome-night-shift
 ```
 
+#### Testing a pre-release from TestPyPI
+Download only the Night Shift packages from TestPyPI, then install those files, so every
+other dependency still comes from PyPI. Don't add TestPyPI as an index (`--index-url`/
+`--extra-index-url`): anyone can upload any package name there.
+```bash
+pipx run pip download --no-deps --only-binary=:all: \
+  --index-url https://test.pypi.org/simple/ --dest ~/night-shift-wheels \
+  nocturne-shift gnome-night-shift
+pipx install --system-site-packages ~/night-shift-wheels/nocturne_shift-*.whl
+pipx inject nocturne-shift ~/night-shift-wheels/gnome_night_shift-*.whl
+```
 ### Via GNOME Extensions (Recommended)
 
 [Coming soon, link to extension on extensions.gnome.org]
