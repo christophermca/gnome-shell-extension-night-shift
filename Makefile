@@ -1,5 +1,5 @@
 FOLDER_NAME = night-shift@christophermca.github.io
-SRC_DIR=src/
+SRC_DIR=src
 
 ZIP_FILE := $(FOLDER_NAME)
 ZIP_FILE := $(addsuffix .zip,$(ZIP_FILE))
@@ -14,7 +14,9 @@ all:
 	@echo "MAKEFILE_DIR: '$(MAKEFILE_DIR)'"
 
 zip:
-	cd $(SRC_DIR) && zip -r ../$(ZIP_FILE) . -x '*.git*' -x '*.compiled' -x '*__pycache__*'
+	rm -rf $(ZIP_FILE)
+	glib-compile-schemas --strict $(SRC_DIR)/schemas
+	cd $(SRC_DIR)/ && zip -r ../$(ZIP_FILE) . -x '*.git*' -x '*__pycache__*'
 
 
 .PHONY: install
@@ -44,6 +46,7 @@ clean:
 
 .PHONY: link
 link:
+	glib-compile-schemas --strict $(SRC_DIR)/schemas
 	cp -asf $(MAKEFILE_DIR)/$(SRC_DIR)/* $(HOME)/.local/share/gnome-shell/extensions/$(FOLDER_NAME)
 
 .PHONY: update-settings

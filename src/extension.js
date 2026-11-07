@@ -32,7 +32,7 @@ const PROGRAM = "gnome-night-shift";
 const INSTALL_HINT =
   "Install the helper: pipx install --system-site-packages gnome-night-shift";
 
-// nocturne-shift isn't installed at all (as opposed to failing when run)
+// gnome-night-shift isn't installed at all (as opposed to failing when run)
 class HelperMissingError extends Error {}
 
 function findProgram() {
@@ -59,7 +59,7 @@ export default class NightShiftExtension extends Extension {
   }
 
   disable() {
-    const action = if (Main.sessionMode.isLocked) ? "stop" : "teardown"
+    const action = Main.sessionMode.isLocked ? "stop" : "teardown";
     this._disableServices(action);
 
     if (this._useGeoclueId) {
@@ -96,7 +96,7 @@ export default class NightShiftExtension extends Extension {
       desktopSettings.set_string("color-scheme", shift);
   }
 
-  // Runs `nocturne-shift ...args`. Throws HelperMissingError when the command
+  // Runs `gnome-night-shift`. Throws HelperMissingError when the command
   // isn't installed, or an Error with its stderr when it exits non-zero.
   async _nightShift(...args) {
     const cmd = findProgram();
@@ -135,9 +135,8 @@ export default class NightShiftExtension extends Extension {
       await this._nightShift("setup", pathToSchemas);
     } catch (e) {
       console.error(`[${PROGRAM}] Failed to create and start ${e}`);
-      // e.g. only nocturne-shift is installed: "... requires: pip install 'gnome-night-shift'"
       Main.notify(
-        "Gnome Night Shift",
+        this.metadata.name,
         e instanceof HelperMissingError
           ? INSTALL_HINT
           : `Timers could not be set up: ${e.message}`,
