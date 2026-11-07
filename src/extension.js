@@ -28,21 +28,22 @@ import { NightShiftIndicator } from "./indicator.js";
 
 Gio._promisify(Gio.Subprocess.prototype, "communicate_utf8_async");
 
+const PROGRAM = "gnome-night-shift";
 const INSTALL_HINT =
   "Install the helper: pipx install --system-site-packages gnome-night-shift";
 
 // nocturne-shift isn't installed at all (as opposed to failing when run)
 class HelperMissingError extends Error {}
 
-function findNocturneShift() {
-  const nocShiftPath = GLib.find_program_in_path("nocturne-shift");
-  if (nocShiftPath) return nocShiftPath;
+function findProgram() {
+  const gnomeNightShift = GLib.find_program_in_path(PROGRAM);
+  if (gnomeNightShift) return gnomeNightShift;
   // gnome-shell's PATH often lacks ~/.local/bin, where `pipx install` puts it
   const userBin = GLib.build_filenamev([
     GLib.get_home_dir(),
     ".local",
     "bin",
-    "nocturne-shift",
+    PROGRAM,
   ]);
   return GLib.file_test(userBin, GLib.FileTest.IS_EXECUTABLE) ? userBin : null;
 }
@@ -58,7 +59,8 @@ export default class NightShiftExtension extends Extension {
   }
 
   disable() {
-    this._disableServices();
+    const action = if (Main.sessionMode.isLocked) ? "stop" : "teardown"
+    this._disableServices(action);
 
     if (this._useGeoclueId) {
       this._settings.disconnect(this._useGeoclueId);
@@ -97,8 +99,8 @@ export default class NightShiftExtension extends Extension {
   // Runs `nocturne-shift ...args`. Throws HelperMissingError when the command
   // isn't installed, or an Error with its stderr when it exits non-zero.
   async _nightShift(...args) {
-    const cmd = findNocturneShift();
-    if (!cmd) throw new HelperMissingError("nocturne-shift not found");
+    const cmd = findProgram();
+    if (!cmd) throw new HelperMissingError(`${PROGRAM} not found`);
 
     // stdout still goes to the journal; stderr is read for the error message
     const proc = Gio.Subprocess.new(
@@ -109,39 +111,39 @@ export default class NightShiftExtension extends Extension {
     if (!proc.get_successful()) {
       throw new Error(
         stderr?.trim() ||
-          `nocturne-shift ${args.join(" ")} exited with ${proc.get_exit_status()}`,
+          `${PROGRAM} ${args.join(" ")} exited with ${proc.get_exit_status()}`,
       );
     }
   }
 
-  async _disableServices() {
+  async _disableServices(action) {
     try {
-      await this._nightShift("services", "teardown");
+      await this._nightShift(action);
     } catch (e) {
       // Nothing to tear down without the helper; don't notify on every lock
       if (!(e instanceof HelperMissingError))
-        console.error(`[night-shift] services teardown failed: ${e}`);
+        console.error(`[${PROGRAM}] ${action} failed: ${e}`);
     }
   }
 
   async _createAndStartServices() {
     try {
       const pathToSchemas = GLib.build_filenamev([this.path, "schemas"]);
-      console.log(`[night-shift] start createAndStartServices`);
+      console.log(`[${PROGRAM}] start createAndStartServices`);
       if (!GLib.file_test(pathToSchemas, GLib.FileTest.IS_DIR))
         throw new Error(`File not found ${pathToSchemas}`);
-      await this._nightShift("services", "setup", pathToSchemas);
+      await this._nightShift("setup", pathToSchemas);
     } catch (e) {
-      console.error(`[night-shift] Failed to create and start services ${e}`);
+      console.error(`[${PROGRAM}] Failed to create and start ${e}`);
       // e.g. only nocturne-shift is installed: "... requires: pip install 'gnome-night-shift'"
       Main.notify(
-        "Night Shift",
+        "Gnome Night Shift",
         e instanceof HelperMissingError
           ? INSTALL_HINT
           : `Timers could not be set up: ${e.message}`,
       );
     } finally {
-      console.log(`[night-shift] completed createAndStartServices`);
+      console.log(`[${PROGRAM}] completed createAndStartServices`);
     }
   }
 
@@ -173,7 +175,7 @@ export default class NightShiftExtension extends Extension {
         "changed::use-geoclue",
         (set, key) => {
           let newValue = this._settings.get_boolean(key);
-          log(`[night-shift] use-geoclue changed to: ${newValue}`);
+          log(`[gnome-night-shift] use-geoclue changed to: ${newValue}`);
           GLib.spawn_command_line_async(
             "systemctl --user restart get-sunrise-sunset.service",
           );
@@ -186,7 +188,7 @@ export default class NightShiftExtension extends Extension {
         this.openPreferences(),
       );
     } catch (e) {
-      console.error(`[night-shift] Error in _handleIndicator: ${e}`);
+      console.error(`[gnome-night-shift] Error in _handleIndicator: ${e}`);
     }
   }
 }
