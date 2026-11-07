@@ -33,8 +33,10 @@ other dependency still comes from PyPI. Don't add TestPyPI as an index (`--index
 pipx run pip download --no-deps --only-binary=:all: \
   --index-url https://test.pypi.org/simple/ --dest ~/night-shift-wheels \
   nocturne-shift gnome-night-shift
-pipx install --system-site-packages ~/night-shift-wheels/nocturne_shift-*.whl
-pipx inject nocturne-shift ~/night-shift-wheels/gnome_night_shift-*.whl
+
+pipx install --system-site-packages \
+  --preinstall ~/night-shift-wheels/nocturne_shift-*.whl \
+  ~/night-shift-wheels/gnome_night_shift-*.whl
 ```
 ### Via GNOME Extensions (Recommended)
 
