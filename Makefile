@@ -24,22 +24,23 @@ install: zip
 	gnome-extensions install $(ZIP_FILE) --force
 
 e2e-test:
-	 virtualenv venv && \
+	virtualenv venv && \
 	. venv/bin/activate &&\
 	pip install -U shexli &&\
 	shexli $(ZIP_FILE)
 
 
 clean:
-	rm -rf $(MAKEFILE_DIR)/venv \
+	rm -rf $(MAKEFILE_DIR)/venv
 	rm -rf $(ZIP_FILE)
 
 link:
 	glib-compile-schemas --strict $(SRC_DIR)/schemas
+	mkdir -p $(HOME)/.local/share/gnome-shell/extensions/$(FOLDER_NAME)
 	cp -asf $(MAKEFILE_DIR)/$(SRC_DIR)/* $(HOME)/.local/share/gnome-shell/extensions/$(FOLDER_NAME)
 
 update-settings:
-	GSETTINGS_SCHEMA="$(HOME)/.local/share/gnome-shell/extensions/$(FOLDER_NAME)/schemas" dconf-editor
+	GSETTINGS_SCHEMA_DIR="$(HOME)/.local/share/gnome-shell/extensions/$(FOLDER_NAME)/schemas" dconf-editor
 
 run:
 	dbus-run-session -- gnome-shell --devkit --wayland
