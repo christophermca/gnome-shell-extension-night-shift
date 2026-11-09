@@ -7,7 +7,7 @@ ZIP_FILE := $(addsuffix .zip,$(ZIP_FILE))
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 
 
-.PHONY: all install e2e-test clean link update-settings run log-extension log-preferences
+.PHONY: all install e2e-test clean link update-settings run log-extension log-preferences release
 
 all:
 	@echo "ZIP_FILE: '$(ZIP_FILE)'"
@@ -49,3 +49,20 @@ log-extension:
 
 log-preferences:
 	journalctl -f -o cat /usr/bin/gjs
+
+# Set the version in one place: `make release VERSION=0.5.4` writes it into
+# metadata.json, commits that change and tags the commit v0.5.4, so the tag
+# and version-name can't disagree. Push afterwards with the command it prints.
+release:
+	@echo "$(VERSION)" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$$' \
+		|| { echo "usage: make release VERSION=X.Y.Z"; exit 1; }
+	@git diff --quiet && git diff --cached --quiet \
+		|| { echo "commit or stash your changes first"; exit 1; }
+	@! git rev-parse -q --verify "refs/tags/v$(VERSION)" >/dev/null \
+		|| { echo "tag v$(VERSION) already exists"; exit 1; }
+	sed -i -E 's/("version-name":[[:space:]]*")[^"]*"/\1$(VERSION)"/' $(SRC_DIR)/metadata.json
+	@test "$$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["version-name"])' $(SRC_DIR)/metadata.json)" = "$(VERSION)" \
+		|| { echo "could not set version-name in $(SRC_DIR)/metadata.json"; exit 1; }
+	git commit -m "Release v$(VERSION)" -- $(SRC_DIR)/metadata.json
+	git tag -a "v$(VERSION)" -m "Night Shift $(VERSION)"
+	@echo "Now push the commit and the tag: git push origin HEAD v$(VERSION)"
