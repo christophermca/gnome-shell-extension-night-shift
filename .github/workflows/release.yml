@@ -1,0 +1,48 @@
+name: Release
+
+# Runs when a version tag is pushed (e.g. `make release VERSION=0.5.4`, then
+# `git push origin HEAD v0.5.4`). Fails if metadata.json's version-name doesn't
+# match the tag; otherwise builds the zip and attaches it to a GitHub Release,
+# ready to upload to extensions.gnome.org.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # create the GitHub Release
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Check that metadata.json matches the tag
+        run: |
+          want="${GITHUB_REF_NAME#v}"
+          have=$(python3 -c 'import json; print(json.load(open("src/metadata.json"))["version-name"])')
+          if [ "$have" != "$want" ]; then
+            echo "::error file=src/metadata.json::version-name is \"$have\" but the tag is $GITHUB_REF_NAME. Use: make release VERSION=X.Y.Z"
+            exit 1
+          fi
+          echo "metadata.json version-name $have matches $GITHUB_REF_NAME"
+
+      - name: Check the JavaScript parses
+        run: |
+          for f in src/*.js; do node --check --input-type=module < "$f"; done
+
+      - name: Build the zip
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libglib2.0-bin zip
+          make zip
+
+      - name: Create the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            night-shift@christophermca.github.io.zip \
+            --title "Night Shift ${GITHUB_REF_NAME#v}" --generate-notes
