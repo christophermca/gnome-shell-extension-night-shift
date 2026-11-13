@@ -4,6 +4,7 @@ import * as PopupMenu from "resource:///org/gnome/shell/ui/popupMenu.js";
 import GObject from "gi://GObject";
 import St from "gi://St";
 import Gio from "gi://Gio";
+import { describeEvent } from "./eventHandler.js";
 
 export const NightShiftIndicator = GObject.registerClass(
   class NightShiftIndicator extends PanelMenu.Button {
@@ -28,13 +29,13 @@ export const NightShiftIndicator = GObject.registerClass(
       });
 
       this._dataItem2 = new PopupMenu.PopupImageMenuItem(
-        "Loading data...",
+        "Initializing...",
         "daytime-sunrise-symbolic",
         { reactive: false, can_focus: false, activate: false },
       );
 
       this._dataItem3 = new PopupMenu.PopupImageMenuItem(
-        "Loading data...",
+        "Initializing...",
         "daytime-sunset-symbolic",
         { reactive: false, can_focus: false, activate: false },
       );
@@ -44,6 +45,26 @@ export const NightShiftIndicator = GObject.registerClass(
       this.menu.addMenuItem(this._dataItem3);
 
       this.initialize();
+    }
+
+    _showTimes() {
+      const [sunrise, sunset] = this._settings
+        .get_value("times")
+        .recursiveUnpack();
+      const tzid = this._settings.get_string("tzid") || undefined;
+      console.log(sunrise, sunset, tzid);
+
+      for (const [item, value] of [
+        [this.sunrise, sunrise],
+        [this.sunset, sunset],
+      ]) {
+        const date = new Date(value);
+        // the schema default is ("sunrise", "sunset") until the first fetch
+        item.label.text = date.getTime();
+        item.label.text = Number.isNaN(date.getTime())
+          ? "Loading data..."
+          : describeEvent(date, tzid);
+      }
     }
 
     initialize() {
@@ -61,6 +82,7 @@ export const NightShiftIndicator = GObject.registerClass(
         Gio.SettingsBindFlags.GET,
       );
 
+      // this._showTimes();
       const timesData = this._settings.get_value("times");
       const [sunrise, sunset] = timesData.recursiveUnpack();
 
