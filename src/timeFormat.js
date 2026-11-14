@@ -36,16 +36,31 @@ function validTimeZone(tzid) {
   }
 }
 
-// Labels for saved sunrise/sunset values, in the hour cycle chosen in
-// preferences (the `time-format` setting):
-//
-//   h11  12-hour, 0-11  ("00:15 AM", "06:51 PM")
-//   h12  12-hour, 1-12  ("12:15 AM", "06:51 PM")
-//   h23  24-hour, 0-23  ("00:15", "18:51")
-//   h24  24-hour, 1-24  ("24:15", "18:51")
-//
-// `locale` is for the tests; leave it out to use the user's language, which
-// decides how AM/PM is written ("PM", "pm", "nachm.", ...).
+// The calendar day of `date` in `timeZone` (undefined = this computer's), as
+// "2026-09-25". Built from parts so it doesn't depend on any locale's format.
+function calendarDay(date, timeZone) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const get = (type) => parts.find((p) => p.type === type).value;
+  return `${get("year")}-${get("month")}-${get("day")}`;
+}
+
+/**
+ * Labels for saved sunrise/sunset values, in the hour cycle chosen in
+ * preferences (the `time-format` setting):
+ *
+ *  h11  12-hour, 0-11  ("00:15 AM", "06:51 PM")
+ *  h12  12-hour, 1-12  ("12:15 AM", "06:51 PM")
+ *  h23  24-hour, 0-23  ("00:15", "18:51")
+ *  h24  24-hour, 1-24  ("24:15", "18:51")
+ *
+ * `locale` is for the tests;
+ * leave it out to use the user's language, which decides how AM/PM is written ("PM", "pm", "nachm.", ...).
+ **/
 class FormatSunTime {
   constructor(timeFormat, locale = undefined) {
     this.timeFormat = timeFormat;
@@ -63,16 +78,26 @@ class FormatSunTime {
     }).format(date);
   }
 
+  // "Thu, Sep 24" for `date` in `timeZone`, in the user's language
+  _date(date, timeZone) {
+    return new Intl.DateTimeFormat(this.locale, {
+      timeZone,
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+    }).format(date);
+  }
   // Label for one saved value.
   //
   // `value` is the ISO date-time nocturne-shift saves
   // ("2026-09-25T06:52:10-04:00"); `tzid` is the location's time zone
   // ("America/New_York"). Shows the time at the location, and adds this
   // computer's local time only when its UTC offset differs at that moment:
-  //
+
   //   "06:52 AM"                             same time zone
   //   "06:30 AM +0530 | (09:00 PM -0400)"    different time zone
-  //
+  //   "06:30 AM +0530 | (09:00 PM -0400, Thu, Sep 24)" different day
+
   // Returns null when there's nothing to show yet: the schema default
   // ("sunrise"/"sunset") before the first fetch. Plain "HH:MM", saved by
   // nocturne-shift before 0.7.1, is shown as it is.
@@ -87,8 +112,16 @@ class FormatSunTime {
     const localOffset = utcOffset(date, undefined);
 
     const time = this._time(date, zone);
+
     if (offset === localOffset) return time;
-    return `${time} ${offset} | (${this._time(date, undefined)} ${localOffset})`;
+
+    // Converting to local time can cross midnight: Kolkata's sunrise is
+    // the evening before in New York. Show the local date when it differs.
+    let local = `${this._time(date, undefined)} ${localOffset}`;
+    if (calendarDay(date, zone) !== calendarDay(date, undefined)) {
+      local += `, ${this._date(date, undefined)}`;
+    }
+    return `${time} ${offset} | (${local})`;
   }
 }
 
