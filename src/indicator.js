@@ -4,6 +4,7 @@ import * as PopupMenu from "resource:///org/gnome/shell/ui/popupMenu.js";
 import GObject from "gi://GObject";
 import St from "gi://St";
 import Gio from "gi://Gio";
+import { formatSunTime } from "./timeFormat.js";
 
 export const NightShiftIndicator = GObject.registerClass(
   class NightShiftIndicator extends PanelMenu.Button {
@@ -28,13 +29,13 @@ export const NightShiftIndicator = GObject.registerClass(
       });
 
       this._dataItem2 = new PopupMenu.PopupImageMenuItem(
-        "Loading data...",
+        "Initializing...",
         "daytime-sunrise-symbolic",
         { reactive: false, can_focus: false, activate: false },
       );
 
       this._dataItem3 = new PopupMenu.PopupImageMenuItem(
-        "Loading data...",
+        "Initializing...",
         "daytime-sunset-symbolic",
         { reactive: false, can_focus: false, activate: false },
       );
@@ -61,27 +62,17 @@ export const NightShiftIndicator = GObject.registerClass(
         Gio.SettingsBindFlags.GET,
       );
 
-      const timesData = this._settings.get_value("times");
-      const [sunrise, sunset] = timesData.recursiveUnpack();
-
-      if (this.sunrise && this.sunset) {
-        this.sunrise.label.text = sunrise;
-        this.sunset.label.text = sunset;
-      }
+      // Runs once
+      this._showTimes();
 
       // Dynamically update
       this._updateTimesId = this._settings.connect(
         "changed::times",
-        (set, key) => {
-          let timesTuple = set.get_value(key);
-          let [updatedTimeSunrise, updatedTimeSunset] =
-            timesTuple.recursiveUnpack();
+        (set, key) => this._showTimes(),
+      );
 
-          if (this.sunrise && this.sunset) {
-            this.sunrise.label.text = `${updatedTimeSunrise}`;
-            this.sunset.label.text = `${updatedTimeSunset}`;
-          }
-        },
+      this._updateTzid = this._settings.connect("changed::tzid", (set, key) =>
+        this._showTimes(),
       );
     }
 
@@ -98,12 +89,30 @@ export const NightShiftIndicator = GObject.registerClass(
     }
 
     destroy() {
+      if (this._updateTzid) {
+        this._settings.disconnect(this._updateTzid);
+        this._updateTzid = null;
+      }
+
       if (this._updateTimesId) {
         this._settings.disconnect(this._updateTimesId);
         this._updateTimesId = null;
       }
 
       super.destroy();
+    }
+
+    _showTimes() {
+      const [sunrise, sunset] = this._settings
+        .get_value("times")
+        .recursiveUnpack();
+      const tzid = this._settings.get_string("tzid") || undefined;
+
+      // `formatSunTime` returns null for the schema default ("sunrise", "sunset"),
+      //  which is saved until the first fetch
+      this.sunrise.label.text =
+        formatSunTime(sunrise, tzid) ?? "Loading data...";
+      this.sunset.label.text = formatSunTime(sunset, tzid) ?? "Loading data...";
     }
   },
 );
