@@ -4,6 +4,7 @@ import * as PopupMenu from "resource:///org/gnome/shell/ui/popupMenu.js";
 import GObject from "gi://GObject";
 import St from "gi://St";
 import Gio from "gi://Gio";
+import { resolveHourCycle, FormatSunTime } from "./timeFormat.js";
 
 export const NightShiftIndicator = GObject.registerClass(
   class NightShiftIndicator extends PanelMenu.Button {
@@ -28,13 +29,13 @@ export const NightShiftIndicator = GObject.registerClass(
       });
 
       this._dataItem2 = new PopupMenu.PopupImageMenuItem(
-        "Loading data...",
+        "Initializing...",
         "daytime-sunrise-symbolic",
         { reactive: false, can_focus: false, activate: false },
       );
 
       this._dataItem3 = new PopupMenu.PopupImageMenuItem(
-        "Loading data...",
+        "Initializing...",
         "daytime-sunset-symbolic",
         { reactive: false, can_focus: false, activate: false },
       );
@@ -61,28 +62,33 @@ export const NightShiftIndicator = GObject.registerClass(
         Gio.SettingsBindFlags.GET,
       );
 
-      const timesData = this._settings.get_value("times");
-      const [sunrise, sunset] = timesData.recursiveUnpack();
+      // GNOME's own 12h/24h clock setting, used when time-format is "system".
+      // Created first: _showTimes() below reads it.
+      this._interfaceSettings = new Gio.Settings({
+        schema_id: "org.gnome.desktop.interface",
+      });
 
-      if (this.sunrise && this.sunset) {
-        this.sunrise.label.text = sunrise;
-        this.sunset.label.text = sunset;
-      }
+      this._clockFormatId = this._interfaceSettings.connect(
+        "changed::clock-format",
+        () => this._showTimes(),
+      );
+
+      // Runs once
+      this._showTimes();
 
       // Dynamically update
       this._updateTimesId = this._settings.connect(
         "changed::times",
-        (set, key) => {
-          let timesTuple = set.get_value(key);
-          let [updatedTimeSunrise, updatedTimeSunset] =
-            timesTuple.recursiveUnpack();
-
-          if (this.sunrise && this.sunset) {
-            this.sunrise.label.text = `${updatedTimeSunrise}`;
-            this.sunset.label.text = `${updatedTimeSunset}`;
-          }
-        },
+        (set, key) => this._showTimes(),
       );
+
+      this._updateTzid = this._settings.connect("changed::tzid", (set, key) =>
+        this._showTimes(),
+      );
+
+      this._timeFormat = this._settings.connect("changed::time-format", () => {
+        this._showTimes();
+      });
     }
 
     get header() {
@@ -98,12 +104,48 @@ export const NightShiftIndicator = GObject.registerClass(
     }
 
     destroy() {
+      if (this._clockFormatId) {
+        this._interfaceSettings.disconnect(this._clockFormatId);
+        this._clockFormatId = null;
+        this._interfaceSettings = null;
+      }
+
+      if (this._timeFormat) {
+        this._settings.disconnect(this._timeFormat);
+        this._timeFormat = null;
+      }
+
+      if (this._updateTzid) {
+        this._settings.disconnect(this._updateTzid);
+        this._updateTzid = null;
+      }
+
       if (this._updateTimesId) {
         this._settings.disconnect(this._updateTimesId);
         this._updateTimesId = null;
       }
 
       super.destroy();
+    }
+
+    _showTimes() {
+      const formatter = new FormatSunTime(
+        resolveHourCycle(
+          this._settings.get_string("time-format"),
+          this._interfaceSettings.get_string("clock-format"),
+        ),
+      );
+      const [sunrise, sunset] = this._settings
+        .get_value("times")
+        .recursiveUnpack();
+      const tzid = this._settings.get_string("tzid");
+
+      // formatSunTime returns null for the schema default ("sunrise",
+      // "sunset"), which is saved until the first fetch
+      this.sunrise.label.text =
+        formatter.formatSunTime(sunrise, tzid) ?? "Loading data...";
+      this.sunset.label.text =
+        formatter.formatSunTime(sunset, tzid) ?? "Loading data...";
     }
   },
 );

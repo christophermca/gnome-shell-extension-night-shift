@@ -33,6 +33,9 @@ jobs:
         run: |
           for f in src/*.js; do node --check --input-type=module < "$f"; done
 
+      - name: Run the Javascript tests
+        run: make test
+
       - name: Build the zip
         run: |
           sudo apt-get update

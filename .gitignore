@@ -2,4 +2,4 @@
 venv
 **/__pytest__
 **/*.egg-info/*
-
+src/schemas/*.compiled

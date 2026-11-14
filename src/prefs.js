@@ -1,4 +1,5 @@
 import Gio from "gi://Gio";
+import Gtk from "gi://Gtk";
 import GLib from "gi://GLib";
 import Adw from "gi://Adw";
 import GObject from "gi://GObject";
@@ -12,6 +13,7 @@ const staticLocationRegex = /^-?\d{1,3}\.\d+$/;
 
 export default class NightShiftPreferences extends ExtensionPreferences {
   fillPreferencesWindow(window) {
+    // Create GUI
     const page = new Adw.PreferencesPage({
       title: gettext("General"),
       icon_name: "dialog-information-symbolic",
@@ -22,6 +24,64 @@ export default class NightShiftPreferences extends ExtensionPreferences {
       title: gettext("Preferences"),
       description: gettext("Configure the extension"),
     });
+
+    /*
+     * Time format
+     *
+     * Sets how sunrise and sunset are shown in the indicator menu. Each
+     * entry is [setting value, label]; keeping them together means the
+     * order of the values and the labels can't drift apart.
+     */
+    const timeFormats = [
+      [
+        "system",
+        gettext("Follow system"),
+        gettext("Uses GNOME's Time Format (Settings › System › Date & Time)"),
+      ],
+      ["h12", gettext("12-hour"), gettext("6:51 PM · midnight is 12:00 AM")],
+      ["h23", gettext("24-hour"), gettext("18:51 · midnight is 00:00")],
+      [
+        "h11",
+        gettext("12-hour, midnight as 0:00 AM"),
+        gettext("6:51 PM · midnight is 0:00 AM"),
+      ],
+      [
+        "h24",
+        gettext("24-hour, midnight as 24:00"),
+        gettext("18:51 · midnight is 24:00"),
+      ],
+    ];
+    const choices = timeFormats.map(([value]) => value);
+    const timeFormatLabels = Gtk.StringList.new(
+      timeFormats.map(([, label]) => label),
+    );
+
+    const displayTimeFormat = new Adw.ComboRow({
+      title: gettext("Time format"),
+      subtitle: gettext("Choose how time is displayed"),
+      model: timeFormatLabels,
+    });
+
+    // How each choice is drawn in the dropdown: the label, a dimmed
+    // description underneath, and the description again as a tooltip.
+    const listFactory = new Gtk.SignalListItemFactory();
+    listFactory.connect("setup", (_factory, listItem) => {
+      const box = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL });
+      box.append(new Gtk.Label({ xalign: 0 }));
+      box.append(
+        new Gtk.Label({ xalign: 0, css_classes: ["dim-label", "caption"] }),
+      );
+      listItem.set_child(box);
+    });
+
+    listFactory.connect("bind", (_factory, listItem) => {
+      const [, label, description] = timeFormats[listItem.get_position()];
+      const box = listItem.get_child();
+      box.get_first_child().set_label(label);
+      box.get_last_child().set_label(description);
+    });
+
+    displayTimeFormat.set_list_factory(listFactory);
 
     const locationSettings = new Adw.PreferencesGroup({
       title: gettext("Location Settings"),
@@ -63,6 +123,7 @@ export default class NightShiftPreferences extends ExtensionPreferences {
     });
 
     general.add(showIndicator);
+    general.add(displayTimeFormat);
 
     locationSettings.add(useGeoclue);
     locationSettings.add(locationSettingsSubgroup);
@@ -75,6 +136,7 @@ export default class NightShiftPreferences extends ExtensionPreferences {
     page.add(general);
     page.add(locationSettings);
 
+    // Bind to events
     window._settings = this.getSettings();
     window._settings.bind(
       "show-indicator",
@@ -103,6 +165,30 @@ export default class NightShiftPreferences extends ExtensionPreferences {
       "text",
       Gio.SettingsBindFlags.DEFAULT,
     );
+
+    // set the initial UI state from Gsettings
+    const selectedTimeFormat = window._settings.get_string("time-format");
+    const initialIndex = choices.indexOf(selectedTimeFormat);
+
+    if (initialIndex !== -1) {
+      displayTimeFormat.set_selected(initialIndex);
+    }
+
+    // Dynamic timeFormat Description
+    const showDescription = () => {
+      const entry = timeFormats[displayTimeFormat.get_selected()];
+      if (entry) displayTimeFormat.set_subtitle(entry[2]);
+    };
+
+    showDescription();
+    displayTimeFormat.connect("notify::selected", showDescription);
+
+    displayTimeFormat.connect("notify::selected", () => {
+      const selectedIndex = displayTimeFormat.get_selected();
+      if (selectedIndex >= 0 && selectedIndex < choices.length) {
+        window._settings.set_string("time-format", choices[selectedIndex]);
+      }
+    });
 
     useGeoclue.connect("notify::active", (row) => {
       const switchRowIsDisabled = !row.get_active();
