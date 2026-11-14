@@ -32,8 +32,8 @@ function validTimeZone(tzid) {
 // ("America/New_York"). Shows the time at the location, and adds this
 // computer's local time only when its UTC offset differs at that moment:
 //
-//   "06:52  -0400"                                 same time zone
-//   "06:30  +0530  Your-Local-Time: (21:00) -0400" different time zone
+//   "06:52"                                 same time zone
+//   "06:30 +0530 | (21:00 -0400)" different time zone
 //
 // Returns null when there's nothing to show yet: the schema default
 // ("sunrise"/"sunset") before the first fetch. Plain "HH:MM", saved by

@@ -29,7 +29,6 @@ export default class NightShiftPreferences extends ExtensionPreferences {
         "Configure how 'Night shift' determines user's location.",
       ),
     });
-
     locationSettings.add_css_class("boxed-list");
 
     const locationSettingsSubgroup = new Adw.PreferencesGroup({

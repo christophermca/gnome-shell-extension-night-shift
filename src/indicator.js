@@ -70,6 +70,10 @@ export const NightShiftIndicator = GObject.registerClass(
         "changed::times",
         (set, key) => this._showTimes(),
       );
+
+      this._updateTzid = this._settings.connect("changed::tzid", (set, key) =>
+        this._showTimes(),
+      );
     }
 
     get header() {
@@ -85,6 +89,11 @@ export const NightShiftIndicator = GObject.registerClass(
     }
 
     destroy() {
+      if (this._updateTzid) {
+        this._settings.disconnect(this._updateTzid);
+        this._updateTzid = null;
+      }
+
       if (this._updateTimesId) {
         this._settings.disconnect(this._updateTimesId);
         this._updateTimesId = null;
@@ -99,14 +108,11 @@ export const NightShiftIndicator = GObject.registerClass(
         .recursiveUnpack();
       const tzid = this._settings.get_string("tzid") || undefined;
 
-      for (const [item, value] of [
-        [this.sunrise, sunrise],
-        [this.sunset, sunset],
-      ]) {
-        const date = new Date(value);
-        // the schema default is ("sunrise", "sunset") until the first fetch
-        item.label.text = formatSunTime(date, tzid) ?? "Loading data...";
-      }
+      // `formatSunTime` returns null for the schema default ("sunrise", "sunset"),
+      //  which is saved until the first fetch
+      this.sunrise.label.text =
+        formatSunTime(sunrise, tzid) ?? "Loading data...";
+      this.sunset.label.text = formatSunTime(sunset, tzid) ?? "Loading data...";
     }
   },
 );
