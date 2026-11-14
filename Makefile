@@ -1,5 +1,6 @@
 FOLDER_NAME = night-shift@christophermca.github.io
 SRC_DIR=src
+SCHEMA_DIR   := src/schemas
 
 ZIP_FILE := $(FOLDER_NAME)
 ZIP_FILE := $(addsuffix .zip,$(ZIP_FILE))
@@ -13,6 +14,9 @@ all:
 	@echo "ZIP_FILE: '$(ZIP_FILE)'"
 	@echo "FOLDER_NAME: '$(FOLDER_NAME)'"
 	@echo "MAKEFILE_DIR: '$(MAKEFILE_DIR)'"
+
+compile-schema:
+	glib-compile-schemas $(SCHEMA_DIR)
 
 # Unit tests for the parts that don't need GNOME Shell (src/timeFormat.js)
 # TZ is fixed so the expected local times are the same on every machine

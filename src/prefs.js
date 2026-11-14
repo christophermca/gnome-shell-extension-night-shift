@@ -1,4 +1,5 @@
 import Gio from "gi://Gio";
+import Gtk from "gi://Gtk";
 import GLib from "gi://GLib";
 import Adw from "gi://Adw";
 import GObject from "gi://GObject";
@@ -23,6 +24,7 @@ export default class NightShiftPreferences extends ExtensionPreferences {
       title: gettext("Preferences"),
       description: gettext("Configure the extension"),
     });
+
     /*
      * Timeformat
      *
@@ -32,19 +34,20 @@ export default class NightShiftPreferences extends ExtensionPreferences {
      * * 12-hours ... 12-hour format using 0 - 12. Midnight is 12 AM
      * * 23-hours ... 24-hour format using 0 - 23. Midngith is 00:00
      * * 24-hours ... 24-hour format using 0 - 24. Midngith is 24:00
-    */
-    const timeFormats = Gtk.StringList.new({
-      '11-hours',
-      '12-hours',
-      '23-hours',
-      '24-hours',
-    })
+     */
+    const choices = ["system", "h11", "h12", "h23", "h24"];
+    const timeFormatLabels = Gtk.StringList.new([
+      "Follow system",
+      "11-hours",
+      "12-hours",
+      "23-hours",
+      "24-hours",
+    ]);
 
-    const displayTimeFormat = new adw.ComboRow({
+    const displayTimeFormat = new Adw.ComboRow({
       title: gettext("Time format"),
       subtitle: gettext("Choose how time is displayed"),
-      model: timeFormats,
-      selected: 0
+      model: timeFormatLabels,
     });
 
     const locationSettings = new Adw.PreferencesGroup({
@@ -87,7 +90,7 @@ export default class NightShiftPreferences extends ExtensionPreferences {
     });
 
     general.add(showIndicator);
-    general.add(displayTimeFormat)
+    general.add(displayTimeFormat);
 
     locationSettings.add(useGeoclue);
     locationSettings.add(locationSettingsSubgroup);
@@ -130,6 +133,21 @@ export default class NightShiftPreferences extends ExtensionPreferences {
       Gio.SettingsBindFlags.DEFAULT,
     );
 
+    // set the initial UI state from Gsettings
+    const selectedTimeFormat = window._settings.get_string("time-format");
+    const initialIndex = choices.indexOf(selectedTimeFormat);
+
+    if (initialIndex !== -1) {
+      displayTimeFormat.set_selected(initialIndex);
+    }
+
+    displayTimeFormat.connect("notify::selected", () => {
+      const selectedIndex = displayTimeFormat.get_selected();
+      if (selectedIndex >= 0 && selectedIndex < choices.length) {
+        window._settings.set_string("time-format", choices[selectedIndex]);
+      }
+    });
+
     useGeoclue.connect("notify::active", (row) => {
       const switchRowIsDisabled = !row.get_active();
       locationSettingsSubgroup.set_sensitive(switchRowIsDisabled);
@@ -155,11 +173,6 @@ export default class NightShiftPreferences extends ExtensionPreferences {
       } else {
         displayError(longitude);
       }
-    });
-
-    displayTimeFormat.connect("notify::selected", (row) => {
-      const selectedString row.selected_item.get_string()
-      console.log(`Selected time format: ${selectedString}`)
     });
 
     const useGeoclueDisabled = !useGeoclue.get_active();

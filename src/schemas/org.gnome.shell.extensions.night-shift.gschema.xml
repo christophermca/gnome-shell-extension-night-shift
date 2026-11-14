@@ -4,6 +4,17 @@
     <key name="show-indicator" type="b">
       <default>true</default>
     </key>
+    <key name="time-format" type="s">
+      <summary>time format</summary>
+      <choices>
+        <choice value="system" />
+        <choice value="h11" />
+        <choice value="h12" />
+        <choice value="h23" />
+        <choice value="h24" />
+      </choices>
+      <default>"system"</default>
+    </key>
     <key name="use-geoclue" type="b">
       <description>Use Geoclue to determine location</description>
       <default>true</default>
