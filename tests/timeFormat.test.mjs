@@ -22,7 +22,7 @@ const NEW_YORK_00_15 = "2026-09-25T00:15:00-04:00";
 test("each time format gives its own hour cycle", () => {
   const cases = {
     h11: ["6:51 PM", "0:15 AM"],
-    h12: ["06:51 PM", "12:15 AM"],
+    h12: ["6:51 PM", "12:15 AM"],
     h23: ["18:51", "00:15"],
     h24: ["18:51", "24:15"],
   };
@@ -48,7 +48,7 @@ test("same time zone shows only the location's time", () => {
   );
   assert.equal(
     h12.formatSunTime(NEW_YORK_SUNRISE, "America/New_York"),
-    "06:52 AM",
+    "6:52 AM",
   );
 });
 
@@ -64,7 +64,7 @@ test("different time zone adds the local time", () => {
   );
   assert.equal(
     h12.formatSunTime(kolkata, "Asia/Kolkata"),
-    "06:30 AM +0530 | (09:00 PM -0400 -1 day)",
+    "6:30 AM +0530 | (9:00 PM -0400 -1 day)",
   );
 });
 
@@ -118,7 +118,7 @@ test('"system" with a 12h clock shows AM/PM', () => {
   );
   assert.equal(
     formatter.formatSunTime(NEW_YORK_SUNSET, "America/New_York"),
-    "06:51 PM",
+    "6:51 PM",
   );
 });
 
@@ -126,7 +126,7 @@ test("a day marker is added when the local day is different", () => {
   // 06:30 Fri 25 Sep in Kolkata is 21:00 Thu 24 Sep in New York
   assert.equal(
     h12.formatSunTime("2026-09-25T06:30:00+05:30", "Asia/Kolkata"),
-    "06:30 AM +0530 | (09:00 PM -0400 -1 day)",
+    "6:30 AM +0530 | (9:00 PM -0400 -1 day)",
   );
   // 18:30 Fri 25 Sep in Honolulu is 00:30 Sat 26 Sep in New York
   assert.equal(

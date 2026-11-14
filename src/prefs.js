@@ -38,12 +38,12 @@ export default class NightShiftPreferences extends ExtensionPreferences {
         gettext("Follow system"),
         gettext("Uses GNOME's Time Format (Settings › System › Date & Time)"),
       ],
-      ["h12", gettext("12-hour"), gettext("06:51 PM · midnight is 12:00 AM")],
+      ["h12", gettext("12-hour"), gettext("6:51 PM · midnight is 12:00 AM")],
       ["h23", gettext("24-hour"), gettext("18:51 · midnight is 00:00")],
       [
         "h11",
         gettext("12-hour, midnight as 0:00 AM"),
-        gettext("06:51 PM · midnight is 0:00 AM"),
+        gettext("6:51 PM · midnight is 0:00 AM"),
       ],
       [
         "h24",

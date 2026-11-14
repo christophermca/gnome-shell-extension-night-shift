@@ -62,8 +62,8 @@ function validTimeZone(tzid) {
 // Labels for saved sunrise/sunset values, in the hour cycle chosen in
 // preferences (the `time-format` setting):
 //
-//   h11  12-hour, 0-11  ("00:15 AM", "06:51 PM")
-//   h12  12-hour, 1-12  ("12:15 AM", "06:51 PM")
+//   h11  12-hour, 0-11  ("0:15 AM", "6:51 PM")
+//   h12  12-hour, 1-12  ("12:15 AM", "6:51 PM")
 //   h23  24-hour, 0-23  ("00:15", "18:51")
 //   h24  24-hour, 1-24  ("24:15", "18:51")
 //
@@ -75,12 +75,12 @@ class FormatSunTime {
     this.locale = locale;
   }
 
-  // "06:51 PM" or "18:51" for `date` in `timeZone` (undefined = this
+  // "6:51 PM" or "18:51" for `date` in `timeZone` (undefined = this
   // computer's). format() keeps the AM/PM part, which a 12-hour time needs.
   _time(date, timeZone) {
     return new Intl.DateTimeFormat(this.locale, {
       timeZone,
-      hour: this.timeFormat == "h11" ? "numeric" : "2-digit",
+      hour: ["h11", "h12"].includes(this.timeFormat) ? "numeric" : "2-digit",
       minute: "2-digit",
       hourCycle: this.timeFormat,
     }).format(date);
@@ -93,9 +93,9 @@ class FormatSunTime {
   // ("America/New_York"). Shows the time at the location, and adds this
   // computer's local time only when its UTC offset differs at that moment:
   //
-  //   "06:52 AM"                             same time zone
-  //   "06:30 AM +0530 | (09:00 PM -0400)"    different time zone
-  //   "06:30 AM +0530 | (09:00 PM -0400 -1 day)"  ...and the day before there
+  //   "6:52 AM"                             same time zone
+  //   "6:30 AM +0530 | (9:00 PM -0400)"    different time zone
+  //   "6:30 AM +0530 | (9:00 PM -0400 -1 day)"  ...and the day before there
   //
   // Returns null when there's nothing to show yet: the schema default
   // ("sunrise"/"sunset") before the first fetch. Plain "HH:MM", saved by
