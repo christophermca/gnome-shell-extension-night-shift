@@ -25,17 +25,6 @@ function resolveHourCycle(timeFormat, clockFormat) {
   return clockFormat === "12h" ? "h12" : "h23";
 }
 
-// A tzid Intl can use, or undefined (empty, or a name it doesn't know)
-function validTimeZone(tzid) {
-  if (!tzid) return undefined;
-  try {
-    new Intl.DateTimeFormat("en-US", { timeZone: tzid });
-    return tzid;
-  } catch {
-    return undefined;
-  }
-}
-
 // The calendar day of `date` in `timeZone` (undefined = this computer's), as
 // "2026-09-25". Built from parts so it doesn't depend on any locale's format.
 function calendarDay(date, timeZone) {
@@ -49,18 +38,37 @@ function calendarDay(date, timeZone) {
   return `${get("year")}-${get("month")}-${get("day")}`;
 }
 
-/**
- * Labels for saved sunrise/sunset values, in the hour cycle chosen in
- * preferences (the `time-format` setting):
- *
- *  h11  12-hour, 0-11  ("00:15 AM", "06:51 PM")
- *  h12  12-hour, 1-12  ("12:15 AM", "06:51 PM")
- *  h23  24-hour, 0-23  ("00:15", "18:51")
- *  h24  24-hour, 1-24  ("24:15", "18:51")
- *
- * `locale` is for the tests;
- * leave it out to use the user's language, which decides how AM/PM is written ("PM", "pm", "nachm.", ...).
- **/
+// How many calendar days this computer's date is from the location's date at
+// the same moment: -1 when it's still the day before here, +1 the day after.
+// calendarDay() strings parse as UTC midnight, so the difference is whole days.
+function dayDifference(date, timeZone) {
+  const ms =
+    Date.parse(calendarDay(date, undefined)) -
+    Date.parse(calendarDay(date, timeZone));
+  return Math.round(ms / 86_400_000);
+}
+
+// A tzid Intl can use, or undefined (empty, or a name it doesn't know)
+function validTimeZone(tzid) {
+  if (!tzid) return undefined;
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: tzid });
+    return tzid;
+  } catch {
+    return undefined;
+  }
+}
+
+// Labels for saved sunrise/sunset values, in the hour cycle chosen in
+// preferences (the `time-format` setting):
+//
+//   h11  12-hour, 0-11  ("00:15 AM", "06:51 PM")
+//   h12  12-hour, 1-12  ("12:15 AM", "06:51 PM")
+//   h23  24-hour, 0-23  ("00:15", "18:51")
+//   h24  24-hour, 1-24  ("24:15", "18:51")
+//
+// `locale` is for the tests; leave it out to use the user's language, which
+// decides how AM/PM is written ("PM", "pm", "nachm.", ...).
 class FormatSunTime {
   constructor(timeFormat, locale = undefined) {
     this.timeFormat = timeFormat;
@@ -78,26 +86,17 @@ class FormatSunTime {
     }).format(date);
   }
 
-  // "Thu, Sep 24" for `date` in `timeZone`, in the user's language
-  _date(date, timeZone) {
-    return new Intl.DateTimeFormat(this.locale, {
-      timeZone,
-      weekday: "short",
-      month: "short",
-      day: "numeric",
-    }).format(date);
-  }
   // Label for one saved value.
   //
   // `value` is the ISO date-time nocturne-shift saves
   // ("2026-09-25T06:52:10-04:00"); `tzid` is the location's time zone
   // ("America/New_York"). Shows the time at the location, and adds this
   // computer's local time only when its UTC offset differs at that moment:
-
+  //
   //   "06:52 AM"                             same time zone
   //   "06:30 AM +0530 | (09:00 PM -0400)"    different time zone
-  //   "06:30 AM +0530 | (09:00 PM -0400, Thu, Sep 24)" different day
-
+  //   "06:30 AM +0530 | (09:00 PM -0400 -1 day)"  ...and the day before there
+  //
   // Returns null when there's nothing to show yet: the schema default
   // ("sunrise"/"sunset") before the first fetch. Plain "HH:MM", saved by
   // nocturne-shift before 0.7.1, is shown as it is.
@@ -112,14 +111,16 @@ class FormatSunTime {
     const localOffset = utcOffset(date, undefined);
 
     const time = this._time(date, zone);
-
     if (offset === localOffset) return time;
 
     // Converting to local time can cross midnight: Kolkata's sunrise is
-    // the evening before in New York. Show the local date when it differs.
+    // the evening before in New York. Mark that like flight times do.
     let local = `${this._time(date, undefined)} ${localOffset}`;
-    if (calendarDay(date, zone) !== calendarDay(date, undefined)) {
-      local += `, ${this._date(date, undefined)}`;
+    const days = dayDifference(date, zone);
+    if (days !== 0) {
+      const sign = days > 0 ? "+" : "-";
+      const unit = Math.abs(days) === 1 ? "day" : "days";
+      local += ` ${sign}${Math.abs(days)} ${unit}`;
     }
     return `${time} ${offset} | (${local})`;
   }

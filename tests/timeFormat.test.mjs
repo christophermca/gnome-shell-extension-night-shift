@@ -60,11 +60,11 @@ test("different time zone adds the local time", () => {
   const kolkata = "2026-09-25T06:30:00+05:30";
   assert.equal(
     h23.formatSunTime(kolkata, "Asia/Kolkata"),
-    "06:30 +0530 | (21:00 -0400, Thu, Sep 24)",
+    "06:30 +0530 | (21:00 -0400 -1 day)",
   );
   assert.equal(
     h12.formatSunTime(kolkata, "Asia/Kolkata"),
-    "06:30 AM +0530 | (09:00 PM -0400, Thu, Sep 24)",
+    "06:30 AM +0530 | (09:00 PM -0400 -1 day)",
   );
 });
 
@@ -79,7 +79,7 @@ test("offsets stay +0530 / -0400 in other languages", () => {
   const french = new FormatSunTime("h23", "fr-FR");
   assert.equal(
     french.formatSunTime("2026-09-25T06:30:00+05:30", "Asia/Kolkata"),
-    "06:30 +0530 | (21:00 -0400, jeu. 24 sept.)",
+    "06:30 +0530 | (21:00 -0400 -1 day)",
   );
 });
 
@@ -122,20 +122,20 @@ test('"system" with a 12h clock shows AM/PM', () => {
   );
 });
 
-test("the local date is added when the local day is different", () => {
+test("a day marker is added when the local day is different", () => {
   // 06:30 Fri 25 Sep in Kolkata is 21:00 Thu 24 Sep in New York
   assert.equal(
     h12.formatSunTime("2026-09-25T06:30:00+05:30", "Asia/Kolkata"),
-    "06:30 AM +0530 | (09:00 PM -0400, Thu, Sep 24)",
+    "06:30 AM +0530 | (09:00 PM -0400 -1 day)",
   );
   // 18:30 Fri 25 Sep in Honolulu is 00:30 Sat 26 Sep in New York
   assert.equal(
     h23.formatSunTime("2026-09-25T18:30:00-10:00", "Pacific/Honolulu"),
-    "18:30 -1000 | (00:30 -0400, Sat, Sep 26)",
+    "18:30 -1000 | (00:30 -0400 +1 day)",
   );
 });
 
-test("no date when the local time is on the same day", () => {
+test("no day marker when the local time is on the same day", () => {
   // 06:55 in London is 01:55 the same day in New York
   assert.equal(
     h23.formatSunTime("2026-09-25T06:55:00+01:00", "Europe/London"),
@@ -143,10 +143,16 @@ test("no date when the local time is on the same day", () => {
   );
 });
 
-test("the date is written in the user's language", () => {
-  const german = new FormatSunTime("h23", "de-DE");
-  assert.equal(
-    german.formatSunTime("2026-09-25T06:30:00+05:30", "Asia/Kolkata"),
-    "06:30 +0530 | (21:00 -0400, Do., 24. Sept.)",
-  );
+test("a difference of more than one day says days", () => {
+  // 00:30 Sat 26 Sep in Kiritimati (UTC+14) is 23:30 Thu 24 Sep in
+  // Pago Pago (UTC-11): two calendar days apart
+  process.env.TZ = "Pacific/Pago_Pago";
+  try {
+    assert.equal(
+      h23.formatSunTime("2026-09-26T00:30:00+14:00", "Pacific/Kiritimati"),
+      "00:30 +1400 | (23:30 -1100 -2 days)",
+    );
+  } finally {
+    process.env.TZ = "America/New_York";
+  }
 });
