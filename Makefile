@@ -26,7 +26,7 @@ test:
 zip:
 	rm -rf $(ZIP_FILE)
 	glib-compile-schemas --strict $(SRC_DIR)/schemas
-	cd $(SRC_DIR)/ && zip -r ../$(ZIP_FILE) . -x '*.git*' -x '*__pycache__*'
+	cd $(SRC_DIR)/ && zip -r ../$(ZIP_FILE) . -x '*.compiled' -x '*.git*' -x '*__pycache__*'
 
 
 install: zip
