@@ -43,7 +43,7 @@ export default class NightShiftPreferences extends ExtensionPreferences {
       [
         "h11",
         gettext("12-hour, midnight as 0:00 AM"),
-        gettext("06:51 PM · midnight is 00:00 AM"),
+        gettext("06:51 PM · midnight is 0:00 AM"),
       ],
       [
         "h24",
