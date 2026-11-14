@@ -80,7 +80,7 @@ class FormatSunTime {
   _time(date, timeZone) {
     return new Intl.DateTimeFormat(this.locale, {
       timeZone,
-      hour: "2-digit",
+      hour: this.timeFormat == "h11" ? "numeric" : "2-digit",
       minute: "2-digit",
       hourCycle: this.timeFormat,
     }).format(date);

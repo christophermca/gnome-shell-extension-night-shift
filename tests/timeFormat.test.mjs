@@ -21,7 +21,7 @@ const NEW_YORK_00_15 = "2026-09-25T00:15:00-04:00";
 
 test("each time format gives its own hour cycle", () => {
   const cases = {
-    h11: ["06:51 PM", "00:15 AM"],
+    h11: ["6:51 PM", "0:15 AM"],
     h12: ["06:51 PM", "12:15 AM"],
     h23: ["18:51", "00:15"],
     h24: ["18:51", "24:15"],
