@@ -32,7 +32,7 @@ zip:
 install: zip
 	gnome-extensions install $(ZIP_FILE) --force
 
-e2e-test:
+e2e-test: zip
 	virtualenv venv && \
 	. venv/bin/activate &&\
 	pip install -U shexli &&\
