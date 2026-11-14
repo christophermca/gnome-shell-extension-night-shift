@@ -1,6 +1,6 @@
 // "HH:MM" and "+0530" for a Date in a time zone (undefined = the system's)
 function timeAndOffset(date, timeZone) {
-  const parts = new Intl.DateTimeFormat("en-GB", {
+  const parts = new Intl.DateTimeFormat(undefined, {
     timeZone,
     hour: "2-digit",
     minute: "2-digit",

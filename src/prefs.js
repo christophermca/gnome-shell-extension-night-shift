@@ -12,6 +12,7 @@ const staticLocationRegex = /^-?\d{1,3}\.\d+$/;
 
 export default class NightShiftPreferences extends ExtensionPreferences {
   fillPreferencesWindow(window) {
+    // Create GUI
     const page = new Adw.PreferencesPage({
       title: gettext("General"),
       icon_name: "dialog-information-symbolic",
@@ -21,6 +22,29 @@ export default class NightShiftPreferences extends ExtensionPreferences {
     const general = new Adw.PreferencesGroup({
       title: gettext("Preferences"),
       description: gettext("Configure the extension"),
+    });
+    /*
+     * Timeformat
+     *
+     * Sets the displayed time format in indicator panel.
+     *
+     * * 11-hours ... 12-hour format using 0 - 11. Midnight is 0 AM
+     * * 12-hours ... 12-hour format using 0 - 12. Midnight is 12 AM
+     * * 23-hours ... 24-hour format using 0 - 23. Midngith is 00:00
+     * * 24-hours ... 24-hour format using 0 - 24. Midngith is 24:00
+    */
+    const timeFormats = Gtk.StringList.new({
+      '11-hours',
+      '12-hours',
+      '23-hours',
+      '24-hours',
+    })
+
+    const displayTimeFormat = new adw.ComboRow({
+      title: gettext("Time format"),
+      subtitle: gettext("Choose how time is displayed"),
+      model: timeFormats,
+      selected: 0
     });
 
     const locationSettings = new Adw.PreferencesGroup({
@@ -63,6 +87,7 @@ export default class NightShiftPreferences extends ExtensionPreferences {
     });
 
     general.add(showIndicator);
+    general.add(displayTimeFormat)
 
     locationSettings.add(useGeoclue);
     locationSettings.add(locationSettingsSubgroup);
@@ -75,6 +100,7 @@ export default class NightShiftPreferences extends ExtensionPreferences {
     page.add(general);
     page.add(locationSettings);
 
+    // Bind to events
     window._settings = this.getSettings();
     window._settings.bind(
       "show-indicator",
@@ -129,6 +155,11 @@ export default class NightShiftPreferences extends ExtensionPreferences {
       } else {
         displayError(longitude);
       }
+    });
+
+    displayTimeFormat.connect("notify::selected", (row) => {
+      const selectedString row.selected_item.get_string()
+      console.log(`Selected time format: ${selectedString}`)
     });
 
     const useGeoclueDisabled = !useGeoclue.get_active();
