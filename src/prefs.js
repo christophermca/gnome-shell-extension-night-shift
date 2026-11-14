@@ -26,23 +26,24 @@ export default class NightShiftPreferences extends ExtensionPreferences {
     });
 
     /*
-     * Timeformat
+     * Time format
      *
-     * Sets the displayed time format in indicator panel.
-     *
-     * * 11-hours ... 12-hour format using 0 - 11. Midnight is 0 AM
-     * * 12-hours ... 12-hour format using 0 - 12. Midnight is 12 AM
-     * * 23-hours ... 24-hour format using 0 - 23. Midngith is 00:00
-     * * 24-hours ... 24-hour format using 0 - 24. Midngith is 24:00
+     * Sets how sunrise and sunset are shown in the indicator menu. Each
+     * entry is [setting value, label]; keeping them together means the
+     * order of the values and the labels can't drift apart.
      */
-    const choices = ["system", "h11", "h12", "h23", "h24"];
-    const timeFormatLabels = Gtk.StringList.new([
-      "Follow system",
-      "11-hours",
-      "12-hours",
-      "23-hours",
-      "24-hours",
-    ]);
+    const timeFormats = [
+      ["system", gettext("Follow system")],
+      ["h12", gettext("12-hour")],
+      ["h23", gettext("24-hour")],
+      ["h11", gettext("12-hour, midnight as 0:00 AM")],
+      ["h24", gettext("24-hour, midnight as 24:00")],
+    ];
+
+    const choices = timeFormats.map(([value]) => value);
+    const timeFormatLabels = Gtk.StringList.new(
+      timeFormats.map(([, label]) => label),
+    );
 
     const displayTimeFormat = new Adw.ComboRow({
       title: gettext("Time format"),
