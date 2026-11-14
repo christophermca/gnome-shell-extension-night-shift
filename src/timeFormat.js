@@ -1,4 +1,19 @@
-import { timeAndOffset } from "./eventHandler.js";
+// "HH:MM" and "+0530" for a Date in a time zone (undefined = the system's)
+function timeAndOffset(date, timeZone) {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone,
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+    timeZoneName: "longOffset",
+  }).formatToParts(date);
+  const get = (type) => parts.find((p) => p.type === type).value;
+  // "GMT+05:30" -> "+0530"; plain "GMT" means UTC -> "+0000"
+  const offset =
+    get("timeZoneName").replace("GMT", "").replace(":", "") || "+0000";
+  return [`${get("hour")}:${get("minute")}`, offset];
+}
+
 // A tzid Intl can use, or undefined (empty, or a name it doesn't know)
 function validTimeZone(tzid) {
   if (!tzid) return undefined;
@@ -32,8 +47,8 @@ function formatSunTime(value, tzid) {
   const [time, offset] = timeAndOffset(date, validTimeZone(tzid));
   const [localTime, localOffset] = timeAndOffset(date);
 
-  if (offset === localOffset) return `${time}  ${offset}`;
-  return `${time}  ${offset}  Your-Local-Time: (${localTime}) ${localOffset}`;
+  if (offset === localOffset) return `${time}`;
+  return `${time} ${offset} | (${localTime} ${localOffset})`;
 }
 
 export { formatSunTime };

@@ -4,7 +4,7 @@ import * as PopupMenu from "resource:///org/gnome/shell/ui/popupMenu.js";
 import GObject from "gi://GObject";
 import St from "gi://St";
 import Gio from "gi://Gio";
-import { describeEvent } from "./eventHandler.js";
+import { formatSunTime } from "./timeFormat.js";
 
 export const NightShiftIndicator = GObject.registerClass(
   class NightShiftIndicator extends PanelMenu.Button {
@@ -47,26 +47,6 @@ export const NightShiftIndicator = GObject.registerClass(
       this.initialize();
     }
 
-    _showTimes() {
-      const [sunrise, sunset] = this._settings
-        .get_value("times")
-        .recursiveUnpack();
-      const tzid = this._settings.get_string("tzid") || undefined;
-      console.log(sunrise, sunset, tzid);
-
-      for (const [item, value] of [
-        [this.sunrise, sunrise],
-        [this.sunset, sunset],
-      ]) {
-        const date = new Date(value);
-        // the schema default is ("sunrise", "sunset") until the first fetch
-        item.label.text = date.getTime();
-        item.label.text = Number.isNaN(date.getTime())
-          ? "Loading data..."
-          : describeEvent(date, tzid);
-      }
-    }
-
     initialize() {
       this._settings.bind(
         "show-indicator",
@@ -82,28 +62,13 @@ export const NightShiftIndicator = GObject.registerClass(
         Gio.SettingsBindFlags.GET,
       );
 
-      // this._showTimes();
-      const timesData = this._settings.get_value("times");
-      const [sunrise, sunset] = timesData.recursiveUnpack();
-
-      if (this.sunrise && this.sunset) {
-        this.sunrise.label.text = sunrise;
-        this.sunset.label.text = sunset;
-      }
+      // Runs once
+      this._showTimes();
 
       // Dynamically update
       this._updateTimesId = this._settings.connect(
         "changed::times",
-        (set, key) => {
-          let timesTuple = set.get_value(key);
-          let [updatedTimeSunrise, updatedTimeSunset] =
-            timesTuple.recursiveUnpack();
-
-          if (this.sunrise && this.sunset) {
-            this.sunrise.label.text = `${updatedTimeSunrise}`;
-            this.sunset.label.text = `${updatedTimeSunset}`;
-          }
-        },
+        (set, key) => this._showTimes(),
       );
     }
 
@@ -126,6 +91,22 @@ export const NightShiftIndicator = GObject.registerClass(
       }
 
       super.destroy();
+    }
+
+    _showTimes() {
+      const [sunrise, sunset] = this._settings
+        .get_value("times")
+        .recursiveUnpack();
+      const tzid = this._settings.get_string("tzid") || undefined;
+
+      for (const [item, value] of [
+        [this.sunrise, sunrise],
+        [this.sunset, sunset],
+      ]) {
+        const date = new Date(value);
+        // the schema default is ("sunrise", "sunset") until the first fetch
+        item.label.text = formatSunTime(date, tzid) ?? "Loading data...";
+      }
     }
   },
 );
