@@ -59,8 +59,7 @@ export default class NightShiftExtension extends Extension {
   }
 
   disable() {
-    const action = Main.sessionMode.isLocked ? "stop" : "teardown";
-    this._disableServices(action);
+    this._disableServices();
 
     if (this._useGeoclueId) {
       this._settings.disconnect(this._useGeoclueId);
@@ -99,15 +98,13 @@ export default class NightShiftExtension extends Extension {
   // Runs `gnome-night-shift`. Throws HelperMissingError when the command
   // isn't installed, or an Error with its stderr when it exits non-zero.
   async _nightShift(...args) {
-    const cmd = findProgram();
-    if (!cmd) throw new HelperMissingError(`${PROGRAM} not found`);
+    const nightShiftCmd = findProgram(); // findprogram - the package installed as a user package vs root user
+    if (!nightShiftCmd) throw new HelperMissingError(`${PROGRAM} not found`);
 
-    // stdout still goes to the journal; stderr is read for the error message
-    const proc = Gio.Subprocess.new(
-      [cmd, ...args],
-      Gio.SubprocessFlags.STDERR_PIPE,
-    );
+    const proc = GLib.spawn_command_line_async("nightShiftCmd(...args)");
+
     const [, stderr] = await proc.communicate_utf8_async(null, null);
+    log(`[gnome-night-shift]:  ${stderr}`);
     if (!proc.get_successful()) {
       throw new Error(
         stderr?.trim() ||
@@ -116,8 +113,9 @@ export default class NightShiftExtension extends Extension {
     }
   }
 
-  async _disableServices(action) {
+  async _disableServices() {
     try {
+      const action = Main.sessionMode.isLocked ? "stop" : "teardown"; // stop service when computer locks, teardown service if uninstalling extension
       await this._nightShift(action);
     } catch (e) {
       // Nothing to tear down without the helper; don't notify on every lock
