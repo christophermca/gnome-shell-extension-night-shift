@@ -26,14 +26,28 @@ import {
 
 import { NightShiftIndicator } from "./indicator.js";
 
-Gio._promisify(Gio.Subprocess.prototype, "communicate_utf8_async");
-
 const PROGRAM = "gnome-night-shift";
 const INSTALL_HINT =
   "Install the helper: pipx install --system-site-packages gnome-night-shift";
 
 // gnome-night-shift isn't installed at all (as opposed to failing when run)
 class HelperMissingError extends Error {}
+
+// Waits for `proc` to exit and returns what it wrote to stderr. Uses the
+// callback form of communicate_utf8_async, so nothing in Gio is changed
+// when this file is loaded (no Gio._promisify).
+function communicate(proc) {
+  return new Promise((resolve, reject) => {
+    proc.communicate_utf8_async(null, null, (source, result) => {
+      try {
+        const [, , stderr] = source.communicate_utf8_finish(result);
+        resolve(stderr);
+      } catch (e) {
+        reject(e);
+      }
+    });
+  });
+}
 
 function findProgram() {
   const gnomeNightShift = GLib.find_program_in_path(PROGRAM);
