@@ -27,45 +27,68 @@ import {
 import { NightShiftIndicator } from "./indicator.js";
 
 const PROGRAM = "gnome-night-shift";
-const INSTALL_HINT =
-  "Install the helper: pipx install --system-site-packages gnome-night-shift";
+const MIN_BACKEND_VERSION = "0.7.5";
+const STALE_AFTER_HOURS = 48; // fetches run daily; allow a missed one
 
-// gnome-night-shift isn't installed at all (as opposed to failing when run)
-class HelperMissingError extends Error {}
+// The extension doesn't start or stop anything: the user runs this once and
+// gnome-night-shift keeps the timers running from then on.
+const SETUP_HINT =
+  "To fetch sunrise and sunset times, run once in a terminal: " +
+  "pipx install --system-site-packages gnome-night-shift && gnome-night-shift setup";
 
-// Waits for `proc` to exit and returns what it wrote to stderr. Uses the
-// callback form of communicate_utf8_async, so nothing in Gio is changed
-// when this file is loaded (no Gio._promisify).
-function communicate(proc) {
-  return new Promise((resolve, reject) => {
-    proc.communicate_utf8_async(null, null, (source, result) => {
-      try {
-        const [, , stderr] = source.communicate_utf8_finish(result);
-        resolve(stderr);
-      } catch (e) {
-        reject(e);
-      }
-    });
-  });
+// Oldest nocturne-shift this extension works with. Raise it when the
+// extension starts relying on something a newer version saves.
+
+const UPGRADE_HINT =
+  "Night Shift needs a newer gnome-night-shift. Run in a terminal: " +
+  "pipx upgrade gnome-night-shift";
+
+// "0.7.10" vs "0.7.5": compare number by number, not as text
+function versionAtLeast(actual, minimum) {
+  const a = actual.split(".").map(Number);
+  const m = minimum.split(".").map(Number);
+  for (let i = 0; i < m.length; i++) {
+    const diff = (a[i] ?? 0) - m[i];
+    if (Number.isNaN(diff)) return false;
+    if (diff !== 0) return diff > 0;
+  }
+  return true;
 }
 
-function findProgram() {
-  const gnomeNightShift = GLib.find_program_in_path(PROGRAM);
-  if (gnomeNightShift) return gnomeNightShift;
-  // gnome-shell's PATH often lacks ~/.local/bin, where `pipx install` puts it
-  const userBin = GLib.build_filenamev([
-    GLib.get_home_dir(),
-    ".local",
-    "bin",
-    PROGRAM,
-  ]);
-  return GLib.file_test(userBin, GLib.FileTest.IS_EXECUTABLE) ? userBin : null;
+/**
+ * Asks this user's systemd (the session bus service that `systemctl --user` talks to)
+ * to restart `unit`. Uses the callback form of call(), wrapped in a Promise,
+ * so nothing in Gio is changed when this file is loaded.
+ **/
+
+function restartUnit(unit) {
+  return new Promise((resolve, reject) => {
+    Gio.DBus.session.call(
+      "org.freedesktop.systemd1",
+      "/org/freedesktop/systemd1",
+      "org.freedesktop.systemd1.Manager",
+      "RestartUnit",
+      new GLib.Variant("(ss)", [unit, "replace"]), // "replace": as systemctl does
+      new GLib.VariantType("(o)"), // the reply is the path of the queued job
+      Gio.DBusCallFlags.NONE,
+      -1,
+      null,
+      (connection, result) => {
+        try {
+          resolve(connection.call_finish(result));
+        } catch (e) {
+          reject(e);
+        }
+      },
+    );
+  });
 }
 
 export default class NightShiftExtension extends Extension {
   enable() {
     this._settings = this.getSettings();
-    this._createAndStartServices();
+    this._remindSetup();
+    this._remindUpgrade();
     this._handleIndicator();
     this._connectToShiftChange();
     // Apply the current state now; the signal only fires on a change
@@ -73,9 +96,6 @@ export default class NightShiftExtension extends Extension {
   }
 
   disable() {
-    const nightShiftAction = Main.sessionMode.isLocked ? "stop" : "teardown"; // stop timers when user locks computer, and teardown service if uninstalling extension
-    this._disableServices(nightShiftAction);
-
     if (this._useGeoclueId) {
       this._settings.disconnect(this._useGeoclueId);
       this._useGeoclueId = null;
@@ -110,54 +130,26 @@ export default class NightShiftExtension extends Extension {
       desktopSettings.set_string("color-scheme", shift);
   }
 
-  // Runs `gnome-night-shift`. Throws HelperMissingError when the command
-  // isn't installed, or an Error with its stderr when it exits non-zero.
-  async _nightShift(...args) {
-    const nightShiftCmd = findProgram();
-    if (!nightShiftCmd) throw new HelperMissingError(`${PROGRAM} not found`);
-
-    // stdout still goes to the journal; stderr is read for the error message
-    const proc = Gio.Subprocess.new(
-      [nightShiftCmd, ...args],
-      Gio.SubprocessFlags.STDERR_PIPE,
-    );
-    const stderr = await communicate(proc);
-    if (!proc.get_successful()) {
-      throw new Error(
-        stderr?.trim() ||
-          `${PROGRAM} ${args.join(" ")} exited with ${proc.get_exit_status()}`,
-      );
-    }
+  _remindSetup() {
+    if (this._remindedSetup) return;
+    const last = Date.parse(this._settings.get_string("timestamp")); // NaN when empty
+    const hours = (Date.now() - last) / 3_600_000;
+    if (!Number.isNaN(last) && hours < STALE_AFTER_HOURS) return;
+    this._remindedSetup = true;
+    Main.notify(this.metadata.name, SETUP_HINT);
   }
 
-  async _disableServices(action) {
-    try {
-      await this._nightShift(action);
-    } catch (e) {
-      // Nothing to tear down without the helper; don't notify on every lock
-      if (!(e instanceof HelperMissingError))
-        console.error(`[${PROGRAM}] ${action} failed: ${e}`);
-    }
-  }
-
-  async _createAndStartServices() {
-    try {
-      const pathToSchemas = GLib.build_filenamev([this.path, "schemas"]);
-      console.log(`[${PROGRAM}] start createAndStartServices`);
-      if (!GLib.file_test(pathToSchemas, GLib.FileTest.IS_DIR))
-        throw new Error(`File not found ${pathToSchemas}`);
-      await this._nightShift("setup", pathToSchemas);
-    } catch (e) {
-      console.error(`[${PROGRAM}] Failed to create and start ${e}`);
-      Main.notify(
-        this.metadata.name,
-        e instanceof HelperMissingError
-          ? INSTALL_HINT
-          : `Timers could not be set up: ${e.message}`,
-      );
-    } finally {
-      console.log(`[${PROGRAM}] completed createAndStartServices`);
-    }
+  // The timers run, but with an old nocturne-shift: it fetched recently
+  // (the timestamp is fresh) yet saved an old version, or none at all,
+  // because versions before MIN_BACKEND_VERSION don't save one.
+  _remindUpgrade() {
+    if (this._remindedUpgrade) return;
+    const last = Date.parse(this._settings.get_string("timestamp"));
+    if (Number.isNaN(last)) return; // not set up: _remindSetup() covers it
+    const installed = this._settings.get_string("backend-version");
+    if (installed && versionAtLeast(installed, MIN_BACKEND_VERSION)) return;
+    this._remindedUpgrade = true;
+    Main.notify(this.metadata.name, UPGRADE_HINT);
   }
 
   _connectToShiftChange() {
@@ -189,8 +181,9 @@ export default class NightShiftExtension extends Extension {
         (set, key) => {
           let newValue = this._settings.get_boolean(key);
           log(`[gnome-night-shift] use-geoclue changed to: ${newValue}`);
-          GLib.spawn_command_line_async(
-            "systemctl --user restart get-sunrise-sunset.service",
+          // fetch the times again with the new location setting
+          restartUnit("get-sunrise-sunset.service").catch((e) =>
+            console.error(`[${PROGRAM}] could not restart the fetch: ${e}`),
           );
         },
       );
