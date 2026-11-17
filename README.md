@@ -14,7 +14,7 @@ The extension detects whether it is currently day or night at your location and 
 
 - GNOME Shell 49+
 - Internet connection
-- gnome-night-shift >= 0.6.6
+- gnome-night-shift >= 0.6.7
 
 ### [**Optional** Dependency]
 - Geoclue 2.0 (Included with gnome)
