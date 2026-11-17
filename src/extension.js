@@ -27,7 +27,6 @@ import {
 import { NightShiftIndicator } from "./indicator.js";
 
 const PROGRAM = "gnome-night-shift";
-const MIN_BACKEND_VERSION = "0.7.5";
 const STALE_AFTER_HOURS = 48; // fetches run daily; allow a missed one
 
 // The extension doesn't start or stop anything: the user runs this once and
@@ -142,6 +141,8 @@ export default class NightShiftExtension extends Extension {
   // The timers run, but with an old nocturne-shift: it fetched recently
   // (the timestamp is fresh) yet saved an old version, or none at all,
   // because versions before MIN_BACKEND_VERSION don't save one.
+
+  const MIN_BACKEND_VERSION = "0.7.5";
   _remindUpgrade() {
     if (this._remindedUpgrade) return;
     const last = Date.parse(this._settings.get_string("timestamp"));

@@ -15,6 +15,15 @@ function utcOffset(date, timeZone) {
   return name.replace("GMT", "").replace(":", "") || "+0000";
 }
 
+// UTC offset for a heading, as "GMT-5:00" / "GMT+5:30" / "GMT+0:00".
+// `timeZone` undefined = this computer's. Follows daylight saving time, so
+// `date` matters: Detroit is "GMT-5:00" in January, "GMT-4:00" in July.
+function gmtOffset(date, timeZone) {
+  const [, sign = "+", hours = "0", minutes = "00"] =
+    utcOffset(date, timeZone).match(/^([+-])(\d{2})(\d{2})$/) ?? [];
+  return `GMT${sign}${Number(hours)}:${minutes}`;
+}
+
 const HOUR_CYCLES = ["h11", "h12", "h23", "h24"];
 
 // The hour cycle to use for the `time-format` setting. "system" follows
@@ -107,8 +116,8 @@ class FormatSunTime {
     if (Number.isNaN(date.getTime())) return null;
 
     const zone = validTimeZone(tzid);
-    const offset = utcOffset(date, zone);
-    const localOffset = utcOffset(date, undefined);
+    const offset = gmtOffset(date, zone);
+    const localOffset = gmtOffset(date, undefined);
 
     const time = this._time(date, zone);
     if (offset === localOffset) return time;
@@ -126,4 +135,4 @@ class FormatSunTime {
   }
 }
 
-export { FormatSunTime, resolveHourCycle };
+export { FormatSunTime, resolveHourCycle, gmtOffset, validTimeZone };
