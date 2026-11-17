@@ -4,7 +4,12 @@ import * as PopupMenu from "resource:///org/gnome/shell/ui/popupMenu.js";
 import GObject from "gi://GObject";
 import St from "gi://St";
 import Gio from "gi://Gio";
-import { resolveHourCycle, FormatSunTime } from "./timeFormat.js";
+import {
+  resolveHourCycle,
+  FormatSunTime,
+  gmtOffset,
+  validTimeZone,
+} from "./timeFormat.js";
 
 export const NightShiftIndicator = GObject.registerClass(
   class NightShiftIndicator extends PanelMenu.Button {
@@ -53,13 +58,6 @@ export const NightShiftIndicator = GObject.registerClass(
         this,
         "visible",
         Gio.SettingsBindFlags.DEFAULT,
-      );
-
-      this._settings.bind(
-        "tzid",
-        this.header.label,
-        "text",
-        Gio.SettingsBindFlags.GET,
       );
 
       // GNOME's own 12h/24h clock setting, used when time-format is "system".
@@ -146,6 +144,15 @@ export const NightShiftIndicator = GObject.registerClass(
         formatter.formatSunTime(sunrise, tzid) ?? "Loading data...";
       this.sunset.label.text =
         formatter.formatSunTime(sunset, tzid) ?? "Loading data...";
+
+      // The location's UTC offset, not its zone name: geoclue can place you
+      // just over a border (Detroit -> Windsor, "America/Toronto") where the
+      // name changes but the offset doesn't. Worked out at sunrise, so it
+      // follows daylight saving time.
+      const zone = validTimeZone(tzid);
+      const at = new Date(sunrise);
+      this.header.label.text =
+        zone && !Number.isNaN(at.getTime()) ? gmtOffset(at, zone) : "Timezone";
     }
   },
 );

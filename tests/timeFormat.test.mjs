@@ -60,26 +60,26 @@ test("different time zone adds the local time", () => {
   const kolkata = "2026-09-25T06:30:00+05:30";
   assert.equal(
     h23.formatSunTime(kolkata, "Asia/Kolkata"),
-    "06:30 +0530 | (21:00 -0400 -1 day)",
+    "06:30 GMT+5:30 | (21:00 GMT-4:00 -1 day)",
   );
   assert.equal(
     h12.formatSunTime(kolkata, "Asia/Kolkata"),
-    "6:30 AM +0530 | (9:00 PM -0400 -1 day)",
+    "6:30 AM GMT+5:30 | (9:00 PM GMT-4:00 -1 day)",
   );
 });
 
 test("the offsets follow daylight saving time", () => {
   assert.equal(
     h23.formatSunTime("2026-01-15T08:06:00+00:00", "Europe/London"),
-    "08:06 +0000 | (03:06 -0500)",
+    "08:06 GMT+0:00 | (03:06 GMT-5:00)",
   );
 });
 
-test("offsets stay +0530 / -0400 in other languages", () => {
+test("offsets stay GMT+05:30 / GMT-04:00 in other languages", () => {
   const french = new FormatSunTime("h23", "fr-FR");
   assert.equal(
     french.formatSunTime("2026-09-25T06:30:00+05:30", "Asia/Kolkata"),
-    "06:30 +0530 | (21:00 -0400 -1 day)",
+    "06:30 GMT+5:30 | (21:00 GMT-4:00 -1 day)",
   );
 });
 
@@ -126,12 +126,12 @@ test("a day marker is added when the local day is different", () => {
   // 06:30 Fri 25 Sep in Kolkata is 21:00 Thu 24 Sep in New York
   assert.equal(
     h12.formatSunTime("2026-09-25T06:30:00+05:30", "Asia/Kolkata"),
-    "6:30 AM +0530 | (9:00 PM -0400 -1 day)",
+    "6:30 AM GMT+5:30 | (9:00 PM GMT-4:00 -1 day)",
   );
   // 18:30 Fri 25 Sep in Honolulu is 00:30 Sat 26 Sep in New York
   assert.equal(
     h23.formatSunTime("2026-09-25T18:30:00-10:00", "Pacific/Honolulu"),
-    "18:30 -1000 | (00:30 -0400 +1 day)",
+    "18:30 GMT-10:00 | (00:30 GMT-4:00 +1 day)",
   );
 });
 
@@ -139,7 +139,7 @@ test("no day marker when the local time is on the same day", () => {
   // 06:55 in London is 01:55 the same day in New York
   assert.equal(
     h23.formatSunTime("2026-09-25T06:55:00+01:00", "Europe/London"),
-    "06:55 +0100 | (01:55 -0400)",
+    "06:55 GMT+1:00 | (01:55 GMT-4:00)",
   );
 });
 
@@ -150,9 +150,23 @@ test("a difference of more than one day says days", () => {
   try {
     assert.equal(
       h23.formatSunTime("2026-09-26T00:30:00+14:00", "Pacific/Kiritimati"),
-      "00:30 +1400 | (23:30 -1100 -2 days)",
+      "00:30 GMT+14:00 | (23:30 GMT-11:00 -2 days)",
     );
   } finally {
     process.env.TZ = "America/New_York";
   }
+});
+test("gmtOffset shows the location's offset as GMT±H:MM", async () => {
+  const { gmtOffset } = await import("../src/timeFormat.js");
+  const winter = new Date("2026-01-15T12:00:00Z");
+  const summer = new Date("2026-07-15T12:00:00Z");
+  assert.equal(gmtOffset(winter, "America/Detroit"), "GMT-5:00");
+  assert.equal(gmtOffset(summer, "America/Detroit"), "GMT-4:00");
+  // the Windsor mix-up: a different name, the same offset
+  assert.equal(gmtOffset(winter, "America/Toronto"), "GMT-5:00");
+  assert.equal(gmtOffset(winter, "Asia/Kolkata"), "GMT+5:30");
+  assert.equal(gmtOffset(winter, "Asia/Kathmandu"), "GMT+5:45");
+  assert.equal(gmtOffset(winter, "Europe/London"), "GMT+0:00");
+  assert.equal(gmtOffset(winter, "Pacific/Kiritimati"), "GMT+14:00");
+  assert.equal(gmtOffset(winter, "America/St_Johns"), "GMT-3:30");
 });
