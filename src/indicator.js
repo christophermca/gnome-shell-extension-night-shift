@@ -142,6 +142,7 @@ export const NightShiftIndicator = GObject.registerClass(
       // "sunset"), which is saved until the first fetch
       this.sunrise.label.text =
         formatter.formatSunTime(sunrise, tzid) ?? "Loading data...";
+
       this.sunset.label.text =
         formatter.formatSunTime(sunset, tzid) ?? "Loading data...";
 
