@@ -28,7 +28,7 @@ import { NightShiftIndicator } from "./indicator.js";
 
 const PROGRAM = "gnome-night-shift";
 const STALE_AFTER_HOURS = 48; // fetches run daily; allow a missed one
-const MIN_BACKEND_VERSION = "0.7.5";
+const MIN_BACKEND_VERSION = "0.7.6";
 
 // The extension doesn't start or stop anything: the user runs this once and
 // gnome-night-shift keeps the timers running from then on.
@@ -43,7 +43,7 @@ const UPGRADE_HINT =
   "Night Shift needs a newer gnome-night-shift. Run in a terminal: " +
   "pipx upgrade gnome-night-shift";
 
-// "0.7.10" vs "0.7.5": compare number by number, not as text
+// "0.7.10" vs "0.7.6": compare number by number, not as text
 function versionAtLeast(actual, minimum) {
   const a = actual.split(".").map(Number);
   const m = minimum.split(".").map(Number);
