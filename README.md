@@ -12,8 +12,9 @@ The extension detects whether it is currently day or night at your location and 
 
 ## 📋 Requirements
 
-- GNOME Shell 50+
+- GNOME Shell 49+
 - Internet connection
+- gnome-night-shift >= 0.6.6
 
 ### [**Optional** Dependency]
 - Geoclue 2.0 (Included with gnome)
@@ -38,6 +39,7 @@ pipx install --system-site-packages \
   --preinstall ~/night-shift-wheels/nocturne_shift-*.whl \
   ~/night-shift-wheels/gnome_night_shift-*.whl
 ```
+
 ### Via GNOME Extensions (Recommended)
 
 [Coming soon, link to extension on extensions.gnome.org]
@@ -51,6 +53,25 @@ pipx install --system-site-packages \
    ```
 3. Enable the extension in GNOME Settings or Extensions app
 4. Ensure location services are enabled in GNOME Settings (GNOME uses Geoclue 2.0 for location detection)
+
+### Set up the timers (once)
+
+After installing the extension, run this once in a terminal:
+
+```bash
+gnome-night-shift setup
+```
+
+This creates the systemd timers that fetch the sunrise and sunset times and
+check for day or night. They keep running from then on; the extension reads
+the results and switches the theme. If the timers aren't set up yet, the
+extension shows a notification with this command.
+
+To remove the timers, for example after uninstalling the extension:
+
+```bash
+gnome-night-shift teardown
+```
 
 ## 🚀 Usage
 
