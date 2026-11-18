@@ -42,7 +42,7 @@ pipx install --system-site-packages \
 
 ### Via GNOME Extensions (Recommended)
 
-[Coming soon, link to extension on extensions.gnome.org]
+[gnome-shell-extension Night Shift](https://extensions.gnome.org/extension/10653/night-shift/)
 
 ### Manual Installation
 
