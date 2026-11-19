@@ -113,12 +113,12 @@ export default class NightShiftPreferences extends ExtensionPreferences {
     });
 
     const latitude = new Adw.EntryRow({
-      title: "Latitude",
+      title: gettext("Latitude"),
       showApplyButton: true,
     });
 
     const longitude = new Adw.EntryRow({
-      title: "Longitude",
+      title: gettext("Longitude"),
       showApplyButton: true,
     });
 

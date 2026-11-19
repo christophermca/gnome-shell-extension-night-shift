@@ -28,6 +28,8 @@ import { NightShiftIndicator } from "./indicator.js";
 
 const PROGRAM = "gnome-night-shift";
 const STALE_AFTER_HOURS = 48; // fetches run daily; allow a missed one
+// Oldest nocturne-shift this extension works with. Raise it when the
+// extension starts relying on something a newer version saves.
 const MIN_BACKEND_VERSION = "0.7.6";
 
 // The extension doesn't start or stop anything: the user runs this once and
@@ -35,9 +37,6 @@ const MIN_BACKEND_VERSION = "0.7.6";
 const SETUP_HINT =
   "To fetch sunrise and sunset times, run once in a terminal: " +
   "pipx install --system-site-packages gnome-night-shift && gnome-night-shift setup";
-
-// Oldest nocturne-shift this extension works with. Raise it when the
-// extension starts relying on something a newer version saves.
 
 const UPGRADE_HINT =
   "Night Shift needs a newer gnome-night-shift. Run in a terminal: " +
