@@ -28,16 +28,15 @@ import { NightShiftIndicator } from "./indicator.js";
 
 const PROGRAM = "gnome-night-shift";
 const STALE_AFTER_HOURS = 48; // fetches run daily; allow a missed one
-const MIN_BACKEND_VERSION = "0.7.6";
+// Oldest nocturne-shift this extension works with. Raise it when the
+// extension starts relying on something a newer version saves.
+const MIN_BACKEND_VERSION = "2.0.0";
 
 // The extension doesn't start or stop anything: the user runs this once and
 // gnome-night-shift keeps the timers running from then on.
 const SETUP_HINT =
   "To fetch sunrise and sunset times, run once in a terminal: " +
   "pipx install --system-site-packages gnome-night-shift && gnome-night-shift setup";
-
-// Oldest nocturne-shift this extension works with. Raise it when the
-// extension starts relying on something a newer version saves.
 
 const UPGRADE_HINT =
   "Night Shift needs a newer gnome-night-shift. Run in a terminal: " +
@@ -63,6 +62,7 @@ function versionAtLeast(actual, minimum) {
 
 function restartUnit(unit) {
   return new Promise((resolve, reject) => {
+    log(`[gnome-night-shift] restartUnit unit-name: ${unit}`);
     Gio.DBus.session.call(
       "org.freedesktop.systemd1",
       "/org/freedesktop/systemd1",
@@ -184,6 +184,10 @@ export default class NightShiftExtension extends Extension {
           log(`[gnome-night-shift] use-geoclue changed to: ${newValue}`);
           // fetch the times again with the new location setting
           restartUnit("get-sunrise-sunset.service").catch((e) =>
+            console.error(`[${PROGRAM}] could not restart the fetch: ${e}`),
+          );
+
+          restartUnit("night-shift.service").catch((e) =>
             console.error(`[${PROGRAM}] could not restart the fetch: ${e}`),
           );
         },
