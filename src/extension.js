@@ -173,7 +173,6 @@ export default class NightShiftExtension extends Extension {
 
   _connectTimesChange() {
     this._timesChangedId = this._settings.connect("changed::times", () => {
-      console.debug("times changed");
       restartUnit("night-shift.service").catch((e) =>
         console.error(`[${PROGRAM}] could not run the check: ${e}`),
       );
