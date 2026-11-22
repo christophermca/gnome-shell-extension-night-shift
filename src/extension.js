@@ -6,8 +6,7 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- *
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
@@ -30,7 +29,8 @@ const PROGRAM = "gnome-night-shift";
 const STALE_AFTER_HOURS = 48; // fetches run daily; allow a missed one
 // Oldest nocturne-shift this extension works with. Raise it when the
 // extension starts relying on something a newer version saves.
-const MIN_BACKEND_VERSION = "2.0.0";
+const MIN_BACKEND_VERSION = "2.0.1";
+const BACKEND_VERSION = regex(/^2\.\d+\.\d+/);
 
 // The extension doesn't start or stop anything: the user runs this once and
 // gnome-night-shift keeps the timers running from then on.
@@ -44,6 +44,18 @@ const UPGRADE_HINT =
 
 // "0.7.10" vs "0.7.6": compare number by number, not as text
 function versionAtLeast(actual, minimum) {
+  const result = minimum.test(actual);
+  // const a = actual.split(".").map(Number);
+  // const m = minimum.split(".").map(Number);
+  // for (let i = 0; i < m.length; i++) {
+  //   const diff = (a[i] ?? 0) - m[i];
+  //   if (Number.isNaN(diff)) return false;
+  //   if (diff !== 0) return diff > 0;
+  // }
+  return result;
+}
+
+function versionMatch(actual, semVar) {
   const a = actual.split(".").map(Number);
   const m = minimum.split(".").map(Number);
   for (let i = 0; i < m.length; i++) {
@@ -148,7 +160,7 @@ export default class NightShiftExtension extends Extension {
     const last = Date.parse(this._settings.get_string("timestamp"));
     if (Number.isNaN(last)) return; // not set up: _remindSetup() covers it
     const installed = this._settings.get_string("backend-version");
-    if (installed && versionAtLeast(installed, MIN_BACKEND_VERSION)) return;
+    if (installed && versionAtLeast(installed, BACKEND_VERSION)) return;
     this._remindedUpgrade = true;
     Main.notify(this.metadata.name, UPGRADE_HINT);
   }
