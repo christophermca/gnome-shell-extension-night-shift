@@ -6,7 +6,7 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
@@ -30,7 +30,6 @@ const STALE_AFTER_HOURS = 48; // fetches run daily; allow a missed one
 // Oldest nocturne-shift this extension works with. Raise it when the
 // extension starts relying on something a newer version saves.
 const MIN_BACKEND_VERSION = "2.0.1";
-const BACKEND_VERSION = regex(/^2\.\d+\.\d+/);
 
 // The extension doesn't start or stop anything: the user runs this once and
 // gnome-night-shift keeps the timers running from then on.
@@ -39,23 +38,13 @@ const SETUP_HINT =
   "pipx install --system-site-packages gnome-night-shift && gnome-night-shift setup";
 
 const UPGRADE_HINT =
-  "Night Shift needs a newer gnome-night-shift. Run in a terminal: " +
-  "pipx upgrade gnome-night-shift";
+  "Night Shift needs a newer gnome-night-shift. Run in a terminal: pipx upgrade gnome-night-shift";
+
+const NEWER_BACKEND_HINT =
+  "gnome-night-shift is newer than this version of Night Shift supports. Update the extension in the Extensions app.";
 
 // "0.7.10" vs "0.7.6": compare number by number, not as text
 function versionAtLeast(actual, minimum) {
-  const result = minimum.test(actual);
-  // const a = actual.split(".").map(Number);
-  // const m = minimum.split(".").map(Number);
-  // for (let i = 0; i < m.length; i++) {
-  //   const diff = (a[i] ?? 0) - m[i];
-  //   if (Number.isNaN(diff)) return false;
-  //   if (diff !== 0) return diff > 0;
-  // }
-  return result;
-}
-
-function versionMatch(actual, semVar) {
   const a = actual.split(".").map(Number);
   const m = minimum.split(".").map(Number);
   for (let i = 0; i < m.length; i++) {
@@ -64,6 +53,11 @@ function versionMatch(actual, semVar) {
     if (diff !== 0) return diff > 0;
   }
   return true;
+}
+
+// A new major version of nocturne-shift may save its settings differently
+function sameMajor(actual, minimum) {
+  return actual.split(".")[0] === minimum.split(".")[0];
 }
 
 /**
@@ -103,6 +97,7 @@ export default class NightShiftExtension extends Extension {
     this._remindUpgrade();
     this._handleIndicator();
     this._connectToShiftChange();
+    this._connectTimesChange();
     // Apply the current state now; the signal only fires on a change
     this.handleShiftChange(this._settings.get_string("day-or-night"));
   }
@@ -116,6 +111,11 @@ export default class NightShiftExtension extends Extension {
     if (this._shiftChangeId) {
       this._settings.disconnect(this._shiftChangeId);
       this._shiftChangeId = null;
+    }
+
+    if (this._timesChangedId) {
+      this._settings.disconnect(this._timesChangedId);
+      this._timesChangedId = null;
     }
 
     this._indicator?.destroy();
@@ -160,9 +160,24 @@ export default class NightShiftExtension extends Extension {
     const last = Date.parse(this._settings.get_string("timestamp"));
     if (Number.isNaN(last)) return; // not set up: _remindSetup() covers it
     const installed = this._settings.get_string("backend-version");
-    if (installed && versionAtLeast(installed, BACKEND_VERSION)) return;
+    const newEnough =
+      installed !== "" && versionAtLeast(installed, MIN_BACKEND_VERSION);
+    if (newEnough && sameMajor(installed, MIN_BACKEND_VERSION)) return;
     this._remindedUpgrade = true;
-    Main.notify(this.metadata.name, UPGRADE_HINT);
+    // newer major version: the extension is behind, not the backend
+    Main.notify(
+      this.metadata.name,
+      newEnough ? NEWER_BACKEND_HINT : UPGRADE_HINT,
+    );
+  }
+
+  _connectTimesChange() {
+    this._timesChangedId = this._settings.connect("changed::times", () => {
+      console.debug("times changed");
+      restartUnit("night-shift.service").catch((e) =>
+        console.error(`[${PROGRAM}] could not run the check: ${e}`),
+      );
+    });
   }
 
   _connectToShiftChange() {
@@ -196,10 +211,6 @@ export default class NightShiftExtension extends Extension {
           log(`[gnome-night-shift] use-geoclue changed to: ${newValue}`);
           // fetch the times again with the new location setting
           restartUnit("get-sunrise-sunset.service").catch((e) =>
-            console.error(`[${PROGRAM}] could not restart the fetch: ${e}`),
-          );
-
-          restartUnit("night-shift.service").catch((e) =>
             console.error(`[${PROGRAM}] could not restart the fetch: ${e}`),
           );
         },
