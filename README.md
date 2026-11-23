@@ -3,6 +3,7 @@
 Night Shift is a GNOME Shell extension that automatically switches your desktop between **Day** and **Night** modes (Light and Dark themes).
 The extension detects whether it is currently day or night at your location and applies the appropriate mode automatically.
 
+![Night Shift switching the GNOME desktop between Day and Night modes](https://raw.githubusercontent.com/christophermca/christophermca.github.io/master/img/demo-gnome-night-shift.gif)
 
 ## Features
 
